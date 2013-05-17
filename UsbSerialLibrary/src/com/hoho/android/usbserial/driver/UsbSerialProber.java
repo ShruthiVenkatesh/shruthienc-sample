@@ -20,6 +20,8 @@
 
 package com.hoho.android.usbserial.driver;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 
 import android.hardware.usb.UsbDevice;
@@ -53,6 +55,11 @@ public enum UsbSerialProber {
             }
             return new FtdiSerialDriver(usbDevice, connection);
         }
+
+        @Override
+        public boolean isSupported(UsbManager manager, UsbDevice usbDevice) {
+            return testIfSupported(usbDevice, FtdiSerialDriver.getSupportedDevices());
+        }
     },
 
     CDC_ACM_SERIAL {
@@ -67,8 +74,13 @@ public enum UsbSerialProber {
             }
             return new CdcAcmSerialDriver(usbDevice, connection);
         }
+
+        @Override
+        public boolean isSupported(UsbManager manager, UsbDevice usbDevice) {
+            return testIfSupported(usbDevice, CdcAcmSerialDriver.getSupportedDevices());
+        }
     },
-    
+
     SILAB_SERIAL {
         @Override
         public UsbSerialDriver getDevice(final UsbManager manager, final UsbDevice usbDevice) {
@@ -80,6 +92,11 @@ public enum UsbSerialProber {
                 return null;
             }
             return new Cp2102SerialDriver(usbDevice, connection);
+        }
+
+        @Override
+        public boolean isSupported(UsbManager manager, UsbDevice usbDevice) {
+            return testIfSupported(usbDevice, Cp2102SerialDriver.getSupportedDevices());
         }
     };
 
@@ -94,6 +111,15 @@ public enum UsbSerialProber {
      *         no devices could be acquired
      */
     public abstract UsbSerialDriver getDevice(final UsbManager manager, final UsbDevice usbDevice);
+
+    /**
+     * Returns {@code true} if the given device is found in the vendor/product map.
+     * 
+     * @param manager the {@link UsbManager} to use
+     * @param usbDevice the raw {@link UsbDevice} to use
+     * @return {@code true} if supported
+     */
+    public abstract boolean isSupported(final UsbManager manager, final UsbDevice usbDevice);
 
     /**
      * Acquires and returns the first available serial device among all
@@ -132,6 +158,25 @@ public enum UsbSerialProber {
             }
         }
         return null;
+    }
+
+    /**
+     * List supported {@link UsbDevice}s which are currently connected.
+     * 
+     * @param usbManager the {@link UsbManager} to use
+     * @return a {@link Collection} of available raw {@link UsbDevice}s
+     */
+    public static Collection<UsbDevice> getAvailableDevices(final UsbManager usbManager) {
+        final HashSet<UsbDevice> supportedDevices = new HashSet<UsbDevice>();
+        for (final UsbDevice usbDevice : usbManager.getDeviceList().values()) {
+            for (final UsbSerialProber prober : values()) {
+                if (prober.isSupported(usbManager, usbDevice)) {
+                    supportedDevices.add(usbDevice);
+                    break;
+                }
+            }
+        }
+        return supportedDevices;
     }
 
     /**
