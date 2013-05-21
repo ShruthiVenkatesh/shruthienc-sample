@@ -98,6 +98,25 @@ public enum UsbSerialProber {
         public boolean isSupported(UsbManager manager, UsbDevice usbDevice) {
             return testIfSupported(usbDevice, Cp2102SerialDriver.getSupportedDevices());
         }
+    },
+
+    PROLIFIC_SERIAL {
+        @Override
+        public UsbSerialDriver getDevice(final UsbManager manager, final UsbDevice usbDevice) {
+            if (!testIfSupported(usbDevice, ProlificSerialDriver.getSupportedDevices())) {
+                return null;
+            }
+            final UsbDeviceConnection connection = manager.openDevice(usbDevice);
+            if (connection == null) {
+                return null;
+            }
+            return new ProlificSerialDriver(usbDevice, connection);
+        }
+
+        @Override
+        public boolean isSupported(UsbManager manager, UsbDevice usbDevice) {
+            return testIfSupported(usbDevice, ProlificSerialDriver.getSupportedDevices());
+        }
     };
 
     /**
