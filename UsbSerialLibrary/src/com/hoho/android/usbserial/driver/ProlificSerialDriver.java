@@ -170,18 +170,19 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     @Override
     public void open() throws IOException {
         UsbInterface usbInterface = mDevice.getInterface(0);
-        
+
         if (!mConnection.claimInterface(usbInterface, true)) {
             throw new IOException("Error claiming Prolific interface 0");
         }
-        
+
         for (int i = 0; i < usbInterface.getEndpointCount(); ++i) {
             UsbEndpoint currentEndpoint = usbInterface.getEndpoint(i);
+            
             switch (currentEndpoint.getAddress()) {
             case READ_ENDPOINT:
                 mReadEndpoint = currentEndpoint;
                 break;
-              
+
             case WRITE_ENDPOINT:
                 mWriteEndpoint = currentEndpoint;
                 break;
@@ -268,7 +269,7 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         lineRequestData[1] = (byte) ((baudRate >> 8) & 0xff);
         lineRequestData[2] = (byte) ((baudRate >> 16) & 0xff);
         lineRequestData[3] = (byte) ((baudRate >> 24) & 0xff);
-        
+
         switch (stopBits) {
         case STOPBITS_1:
             lineRequestData[4] = 0;
