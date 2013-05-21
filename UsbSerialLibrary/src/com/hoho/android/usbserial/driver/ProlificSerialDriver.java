@@ -155,14 +155,6 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         mControlLinesValue = newControlLinesValue;
     }
 
-    /**
-     * Constructor.
-     * 
-     * @param usbDevice
-     *            the {@link UsbDevice} to use
-     * @param usbConnection
-     *            the {@link UsbDeviceConnection} to use
-     */
     public ProlificSerialDriver(UsbDevice device, UsbDeviceConnection connection) {
         super(device, connection);
     }
