@@ -70,13 +70,12 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     public static final int CONTROL_DTR = 0x01;
     public static final int CONTROL_RTS = 0x02;
 
-    // TODO: needed for device type handling:
-    // private static final int DEVICE_TYPE_0 = 0;
-    // private static final int DEVICE_TYPE_1 = 1;
-    // private static final int DEVICE_TYPE_HX = 2;
-    // private static final int DEVICE_TYPE_UNKNOWN = 3;
-    //
-    // private int mDeviceType = DEVICE_TYPE_UNKNOWN;
+    private static final int DEVICE_TYPE_0 = 0;
+    private static final int DEVICE_TYPE_1 = 1;
+    private static final int DEVICE_TYPE_HX = 2;
+    private static final int DEVICE_TYPE_UNKNOWN = 3;
+    
+    private int mDeviceType = DEVICE_TYPE_UNKNOWN;
 
     private UsbEndpoint mReadEndpoint;
     private UsbEndpoint mWriteEndpoint;
@@ -144,9 +143,7 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         vendorIn(0x8383, 0, 1);
         vendorOut(0, 1, null);
         vendorOut(1, 0, null);
-        
-        vendorOut(2, 0x44, null);
-        // TODO: write 0x22 for non-HX devices (?)
+        vendorOut(2, (mDeviceType == DEVICE_TYPE_HX) ? 0x44 : 0x22, null);
     }
 
     private void resetDevice() throws IOException {
@@ -191,16 +188,15 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
             }
         }
 
-        // TODO: Device type handling
-        // TODO: bMaxPacketSize0 equivalent for Android?
-//        if (mDevice.getDeviceClass() == 0x02) {
-//            mDeviceType = DEVICE_TYPE_0;
-//        } else if (mDevice.bMaxPacketSize0 == 0x40) {
-//            mDeviceType = DEVICE_TYPE_HX;
-//        } else if ((mDevice.getDeviceClass() == 0x00)
-//                || (mDevice.getDeviceClass() == 0xff)) {
-//            mDeviceType = DEVICE_TYPE_1;
-//        }
+        if (mDevice.getDeviceClass() == 0x02) {
+            mDeviceType = DEVICE_TYPE_0;
+        } else if ((mReadEndpoint.getMaxPacketSize() == 64)
+                && (mWriteEndpoint.getMaxPacketSize() == 64)) {
+            mDeviceType = DEVICE_TYPE_HX; // TODO: Right way to detect HX device?
+        } else if ((mDevice.getDeviceClass() == 0x00)
+                || (mDevice.getDeviceClass() == 0xff)) {
+            mDeviceType = DEVICE_TYPE_1;
+        }
 
         setControlLines(mControlLinesValue);
         resetDevice();
