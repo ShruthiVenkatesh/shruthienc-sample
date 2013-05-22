@@ -169,34 +169,46 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
             throw new IOException("Error claiming Prolific interface 0");
         }
 
-        for (int i = 0; i < usbInterface.getEndpointCount(); ++i) {
-            UsbEndpoint currentEndpoint = usbInterface.getEndpoint(i);
-            
-            switch (currentEndpoint.getAddress()) {
-            case READ_ENDPOINT:
-                mReadEndpoint = currentEndpoint;
-                break;
-
-            case WRITE_ENDPOINT:
-                mWriteEndpoint = currentEndpoint;
-                break;
+        boolean openSuccessful = false;
+        try {
+            for (int i = 0; i < usbInterface.getEndpointCount(); ++i) {
+                UsbEndpoint currentEndpoint = usbInterface.getEndpoint(i);
+                
+                switch (currentEndpoint.getAddress()) {
+                case READ_ENDPOINT:
+                    mReadEndpoint = currentEndpoint;
+                    break;
+    
+                case WRITE_ENDPOINT:
+                    mWriteEndpoint = currentEndpoint;
+                    break;
+                }
+            }
+    
+            byte maxPacketSize0 = mConnection.getRawDescriptors()[7];
+            if (mDevice.getDeviceClass() == 0x02) {
+                mDeviceType = DEVICE_TYPE_0;
+            } else if (maxPacketSize0 == 64) {
+                mDeviceType = DEVICE_TYPE_HX;
+            } else if ((mDevice.getDeviceClass() == 0x00)
+                    || (mDevice.getDeviceClass() == 0xff)) {
+                mDeviceType = DEVICE_TYPE_1;
+            }
+    
+            setControlLines(mControlLinesValue);
+            resetDevice();
+    
+            doBlackMagic();
+            openSuccessful = true;
+        } finally {
+            if (!openSuccessful) {
+              try {
+                mConnection.releaseInterface(usbInterface);
+              } catch (Exception ingored) {
+                // Do not cover possible exceptions
+              }
             }
         }
-
-        byte maxPacketSize0 = mConnection.getRawDescriptors()[7];
-        if (mDevice.getDeviceClass() == 0x02) {
-            mDeviceType = DEVICE_TYPE_0;
-        } else if (maxPacketSize0 == 64) {
-            mDeviceType = DEVICE_TYPE_HX;
-        } else if ((mDevice.getDeviceClass() == 0x00)
-                || (mDevice.getDeviceClass() == 0xff)) {
-            mDeviceType = DEVICE_TYPE_1;
-        }
-
-        setControlLines(mControlLinesValue);
-        resetDevice();
-
-        doBlackMagic();
     }
 
     @Override
