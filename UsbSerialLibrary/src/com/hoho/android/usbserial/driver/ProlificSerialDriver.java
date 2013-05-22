@@ -213,8 +213,11 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
 
     @Override
     public void close() throws IOException {
-        resetDevice();
-        mConnection.releaseInterface(mDevice.getInterface(0));
+        try {
+            resetDevice();
+        } finally {
+            mConnection.releaseInterface(mDevice.getInterface(0));
+        }
     }
 
     @Override
