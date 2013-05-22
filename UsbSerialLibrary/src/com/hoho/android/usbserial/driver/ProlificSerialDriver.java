@@ -183,11 +183,11 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
             }
         }
 
+        byte maxPacketSize0 = mConnection.getRawDescriptors()[7];
         if (mDevice.getDeviceClass() == 0x02) {
             mDeviceType = DEVICE_TYPE_0;
-        } else if ((mReadEndpoint.getMaxPacketSize() == 64)
-                && (mWriteEndpoint.getMaxPacketSize() == 64)) {
-            mDeviceType = DEVICE_TYPE_HX; // TODO: Right way to detect HX device?
+        } else if (maxPacketSize0 == 64) {
+            mDeviceType = DEVICE_TYPE_HX;
         } else if ((mDevice.getDeviceClass() == 0x00)
                 || (mDevice.getDeviceClass() == 0xff)) {
             mDeviceType = DEVICE_TYPE_1;
