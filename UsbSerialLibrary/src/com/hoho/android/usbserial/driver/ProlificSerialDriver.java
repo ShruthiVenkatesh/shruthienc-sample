@@ -145,7 +145,7 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         vendorIn(0x8383, 0, 1);
         vendorOut(0, 1, null);
         vendorOut(1, 0, null);
-        vendorOut(2, (mDeviceType == DEVICE_TYPE_HX) ? 0x44 : 0x22, null);
+        vendorOut(2, (mDeviceType == DEVICE_TYPE_HX) ? 0x44 : 0x24, null);
     }
 
     private void resetDevice() throws IOException {
