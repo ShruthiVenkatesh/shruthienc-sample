@@ -82,6 +82,8 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
 
     private int mControlLinesValue = 0;
 
+    int mBaudRate = -1, mDataBits = -1, mStopBits = -1, mParity = -1;
+
     private final byte[] inControlTransfer(int requestType, int request,
             int value, int index, int length) throws IOException {
         byte[] buffer = new byte[length];
@@ -255,6 +257,12 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     @Override
     public void setParameters(int baudRate, int dataBits, int stopBits,
             int parity) throws IOException {
+        if ((mBaudRate == baudRate) && (mDataBits == dataBits)
+                && (mStopBits == stopBits) && (mParity == parity)) {
+            // Make sure no action is performed if there is nothing to change
+            return;
+        }
+
         byte[] lineRequestData = new byte[7];
 
         lineRequestData[0] = (byte) (baudRate & 0xff);
@@ -303,6 +311,11 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         ctrlOut(SET_LINE_REQUEST, 0, 0, lineRequestData);
 
         resetDevice();
+
+        mBaudRate = baudRate;
+        mDataBits = dataBits;
+        mStopBits = stopBits;
+        mParity = parity;
     }
 
     @Override
