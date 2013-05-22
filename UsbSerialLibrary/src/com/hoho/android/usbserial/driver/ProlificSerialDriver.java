@@ -266,33 +266,33 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         case STOPBITS_1:
             lineRequestData[4] = 0;
             break;
-  
+
         case STOPBITS_1_5:
             lineRequestData[4] = 1;
             break;
-  
+
         case STOPBITS_2:
             lineRequestData[4] = 2;
             break;
         }
-  
+
         switch (parity) {
         case PARITY_NONE:
             lineRequestData[5] = 0;
             break;
-  
+
         case PARITY_ODD:
             lineRequestData[5] = 1;
             break;
-  
+
         case PARITY_EVEN:
             lineRequestData[5] = 2;
             break;
-  
+
         case PARITY_MARK:
             lineRequestData[5] = 3;
             break;
-  
+
         case PARITY_SPACE:
             lineRequestData[5] = 4;
             break;
@@ -301,7 +301,7 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         lineRequestData[6] = (byte) dataBits;
 
         ctrlOut(SET_LINE_REQUEST, 0, 0, lineRequestData);
-        
+
         resetDevice();
     }
 
