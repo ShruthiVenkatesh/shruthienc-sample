@@ -32,8 +32,10 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
+import android.util.Log;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -70,12 +72,11 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     public static final int CONTROL_DTR = 0x01;
     public static final int CONTROL_RTS = 0x02;
 
-    private static final int DEVICE_TYPE_0 = 0;
-    private static final int DEVICE_TYPE_1 = 1;
-    private static final int DEVICE_TYPE_HX = 2;
-    private static final int DEVICE_TYPE_UNKNOWN = 3;
+    private static final int DEVICE_TYPE_HX = 0;
+    private static final int DEVICE_TYPE_0 = 1;
+    private static final int DEVICE_TYPE_1 = 2;
 
-    private int mDeviceType = DEVICE_TYPE_UNKNOWN;
+    private int mDeviceType = DEVICE_TYPE_HX;
 
     private UsbEndpoint mReadEndpoint;
     private UsbEndpoint mWriteEndpoint;
@@ -83,6 +84,8 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     private int mControlLinesValue = 0;
 
     int mBaudRate = -1, mDataBits = -1, mStopBits = -1, mParity = -1;
+
+    private final String TAG = ProlificSerialDriver.class.getSimpleName();
 
     private final byte[] inControlTransfer(int requestType, int request,
             int value, int index, int length) throws IOException {
@@ -185,21 +188,35 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
                 }
             }
 
-            // TODO(mikey|felix): descriptors are only available in API level 13+.
-            // Use reflection to get this method, falling back to a sane default
-            // (is there one?)
-            mDeviceType = DEVICE_TYPE_0;
-            /*
-            byte maxPacketSize0 = mConnection.getRawDescriptors()[7];
             if (mDevice.getDeviceClass() == 0x02) {
                 mDeviceType = DEVICE_TYPE_0;
-            } else if (maxPacketSize0 == 64) {
-                mDeviceType = DEVICE_TYPE_HX;
-            } else if ((mDevice.getDeviceClass() == 0x00)
-                    || (mDevice.getDeviceClass() == 0xff)) {
-                mDeviceType = DEVICE_TYPE_1;
+            } else {
+                try {
+                    Method getRawDescriptorsMethod
+                        = mConnection.getClass().getMethod("getRawDescriptors");
+                    byte[] rawDescriptors
+                        = (byte[]) getRawDescriptorsMethod.invoke(mConnection);
+                    byte maxPacketSize0 = rawDescriptors[7];
+                    if (maxPacketSize0 == 64) {
+                        mDeviceType = DEVICE_TYPE_HX;
+                    } else if ((mDevice.getDeviceClass() == 0x00)
+                            || (mDevice.getDeviceClass() == 0xff)) {
+                        mDeviceType = DEVICE_TYPE_1;
+                    } else {
+                      Log.w(TAG, "Could not detect PL2303 subtype, "
+                          + "Assuming that it is a HX device");
+                      mDeviceType = DEVICE_TYPE_HX;
+                    }
+                } catch (NoSuchMethodException e) {
+                    Log.w(TAG, "Method UsbDeviceConnection.getRawDescriptors, "
+                            + "required for PL2303 subtype detection, not "
+                            + "available! Assuming that it is a HX device");
+                    mDeviceType = DEVICE_TYPE_HX;
+                } catch (Exception e) {
+                    Log.e(TAG, "An unexpected exception occured while trying "
+                            + "to detect PL2303 subtype", e);
+                }
             }
-            */
 
             setControlLines(mControlLinesValue);
             resetDevice();
