@@ -29,13 +29,14 @@ package com.hoho.android.usbserial.driver;
 
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
-import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
+import android.hardware.usb.UsbManager;
 import android.util.Log;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.security.AccessControlException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -231,12 +232,14 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         return ((getStatus() & flag) == flag);
     }
 
-    public ProlificSerialDriver(UsbDevice device, UsbDeviceConnection connection) {
-        super(device, connection);
+    public ProlificSerialDriver(UsbDevice device) {
+        super(device);
     }
 
     @Override
-    public void open() throws IOException {
+    public void open(UsbManager usbManager) throws IOException, AccessControlException {
+        super.open(usbManager);
+
         UsbInterface usbInterface = mDevice.getInterface(0);
 
         if (!mConnection.claimInterface(usbInterface, true)) {

@@ -22,8 +22,10 @@ package com.hoho.android.usbserial.driver;
 
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbManager;
 
 import java.io.IOException;
+import java.security.AccessControlException;
 
 /**
  * A base class shared by several driver implementations.
@@ -36,7 +38,7 @@ abstract class CommonUsbSerialDriver implements UsbSerialDriver {
     public static final int DEFAULT_WRITE_BUFFER_SIZE = 16 * 1024;
 
     protected final UsbDevice mDevice;
-    protected final UsbDeviceConnection mConnection;
+    protected UsbDeviceConnection mConnection;
 
     protected final Object mReadBufferLock = new Object();
     protected final Object mWriteBufferLock = new Object();
@@ -47,9 +49,8 @@ abstract class CommonUsbSerialDriver implements UsbSerialDriver {
     /** Internal write buffer.  Guarded by {@link #mWriteBufferLock}. */
     protected byte[] mWriteBuffer;
 
-    public CommonUsbSerialDriver(UsbDevice device, UsbDeviceConnection connection) {
+    public CommonUsbSerialDriver(UsbDevice device) {
         mDevice = device;
-        mConnection = connection;
 
         mReadBuffer = new byte[DEFAULT_READ_BUFFER_SIZE];
         mWriteBuffer = new byte[DEFAULT_WRITE_BUFFER_SIZE];
@@ -95,7 +96,15 @@ abstract class CommonUsbSerialDriver implements UsbSerialDriver {
     }
 
     @Override
-    public abstract void open() throws IOException;
+    public void open(UsbManager usbManager) throws IOException, AccessControlException {
+        if (!usbManager.hasPermission(mDevice)) {
+            throw new AccessControlException("No permission to access USB device " + mDevice);
+        }
+        mConnection = usbManager.openDevice(mDevice);
+        if (mConnection == null) {
+            throw new IOException("Could not open USB device " + mDevice);
+        }
+    }
 
     @Override
     public abstract void close() throws IOException;

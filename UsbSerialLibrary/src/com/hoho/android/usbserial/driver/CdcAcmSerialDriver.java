@@ -2,12 +2,13 @@ package com.hoho.android.usbserial.driver;
 
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
-import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
+import android.hardware.usb.UsbManager;
 import android.util.Log;
 
 import java.io.IOException;
+import java.security.AccessControlException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -41,12 +42,14 @@ public class CdcAcmSerialDriver extends CommonUsbSerialDriver {
     private static final int SET_CONTROL_LINE_STATE = 0x22;
     private static final int SEND_BREAK = 0x23;
 
-    public CdcAcmSerialDriver(UsbDevice device, UsbDeviceConnection connection) {
-        super(device, connection);
+    public CdcAcmSerialDriver(UsbDevice device) {
+        super(device);
     }
 
     @Override
-    public void open() throws IOException {
+    public void open(UsbManager usbManager) throws IOException, AccessControlException {
+        super.open(usbManager);
+
         Log.d(TAG, "claiming interfaces, count=" + mDevice.getInterfaceCount());
 
         Log.d(TAG, "Claiming control interface.");

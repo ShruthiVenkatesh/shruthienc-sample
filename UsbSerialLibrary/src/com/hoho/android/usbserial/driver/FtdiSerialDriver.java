@@ -24,6 +24,7 @@ import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
+import android.hardware.usb.UsbManager;
 import android.hardware.usb.UsbRequest;
 import android.util.Log;
 
@@ -31,6 +32,7 @@ import com.hoho.android.usbserial.util.HexDump;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.AccessControlException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -202,8 +204,8 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
      * @throws UsbSerialRuntimeException if the given device is incompatible
      *             with this driver
      */
-    public FtdiSerialDriver(UsbDevice usbDevice, UsbDeviceConnection usbConnection) {
-        super(usbDevice, usbConnection);
+    public FtdiSerialDriver(UsbDevice usbDevice) {
+        super(usbDevice);
         mType = null;
     }
 
@@ -219,7 +221,9 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
     }
 
     @Override
-    public void open() throws IOException {
+    public void open(UsbManager usbManager) throws IOException, AccessControlException {
+        super.open(usbManager);
+
         boolean opened = false;
         try {
             for (int i = 0; i < mDevice.getInterfaceCount(); i++) {
