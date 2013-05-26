@@ -83,7 +83,8 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
 
     private int mControlLinesValue = 0;
 
-    int mBaudRate = -1, mDataBits = -1, mStopBits = -1, mParity = -1;
+    private int mBaudRate = -1, mDataBits = -1, mStopBits = -1, mParity = -1;
+
 
     private final String TAG = ProlificSerialDriver.class.getSimpleName();
 
