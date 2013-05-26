@@ -125,13 +125,6 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
                 PROLIFIC_VENDOR_WRITE_REQUEST, value, index, data);
     }
 
-    /* Currently unused, but probably needed to support getCTS() and so on: */
-//    private final byte[] ctrlIn(int request, int value, int index, int length)
-//            throws IOException {
-//        return inControlTransfer(PROLIFIC_CTRL_IN_REQTYPE, request, value,
-//                index, length);
-//    }
-
     private final void ctrlOut(int request, int value, int index, byte[] data)
             throws IOException {
         outControlTransfer(PROLIFIC_CTRL_OUT_REQTYPE, request, value, index,
