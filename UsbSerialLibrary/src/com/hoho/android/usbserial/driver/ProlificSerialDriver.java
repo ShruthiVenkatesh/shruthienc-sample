@@ -494,12 +494,12 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         setControlLines(newControlLinesValue);
     }
 
-    public void flush(boolean rx, boolean tx) throws IOException {
-        if (rx) {
+    public void flush(boolean flushRX, boolean flushTX) throws IOException {
+        if (flushRX) {
             vendorOut(FLUSH_RX_REQUEST, 0, null);
         }
 
-        if (tx) {
+        if (flushTX) {
             vendorOut(FLUSH_TX_REQUEST, 0, null);
         }
     }
