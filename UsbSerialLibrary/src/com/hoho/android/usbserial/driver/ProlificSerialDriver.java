@@ -375,7 +375,6 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
 
     @Override
     public void setDTR(boolean value) throws IOException {
-        // TODO: Untested!
         int newControlLinesValue;
         if (value) {
             newControlLinesValue = mControlLinesValue | CONTROL_DTR;
@@ -398,7 +397,6 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
 
     @Override
     public void setRTS(boolean value) throws IOException {
-        // TODO: Untested!
         int newControlLinesValue;
         if (value) {
             newControlLinesValue = mControlLinesValue | CONTROL_RTS;
