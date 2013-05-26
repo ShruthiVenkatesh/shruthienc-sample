@@ -386,7 +386,7 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         if (value) {
             newControlLinesValue = mControlLinesValue | CONTROL_DTR;
         } else {
-            newControlLinesValue = mControlLinesValue & ~CONTROL_RTS;
+            newControlLinesValue = mControlLinesValue & ~CONTROL_DTR;
         }
         setControlLines(newControlLinesValue);
     }
