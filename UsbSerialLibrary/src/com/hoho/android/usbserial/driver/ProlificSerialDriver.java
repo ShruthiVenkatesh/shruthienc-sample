@@ -443,9 +443,6 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         mDataBits = dataBits;
         mStopBits = stopBits;
         mParity = parity;
-        
-        //TODO: TEST CODE
-        getStatus();
     }
 
     @Override
