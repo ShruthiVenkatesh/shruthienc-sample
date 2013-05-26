@@ -110,6 +110,19 @@ abstract class CommonUsbSerialDriver implements UsbSerialDriver {
     public abstract void close() throws IOException;
 
     @Override
+    public int getPortCount() {
+        return 1;
+    }
+
+    public UsbSerialPort getPort(int i) {
+        if (i == 0) {
+            return this;
+        } else {
+            throw new IndexOutOfBoundsException();
+        }
+    }
+
+    @Override
     public abstract int read(final byte[] dest, final int timeoutMillis) throws IOException;
 
     @Override

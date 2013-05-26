@@ -24,7 +24,6 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -55,57 +54,58 @@ public enum UsbSerialProber {
      */
     FTDI_SERIAL {
         @Override
-        public List<UsbSerialDriver> probe(final UsbDevice usbDevice) {
-            if (!testIfSupported(usbDevice, FtdiSerialDriver.getSupportedDevices())) {
-                return Collections.emptyList();
+        public UsbSerialDriver getDevice(final UsbDevice usbDevice) {
+            if (testIfSupported(usbDevice, FtdiSerialDriver.getSupportedDevices())) {
+                return new FtdiSerialDriver(usbDevice);
+            } else {
+                return null;
             }
-            final UsbSerialDriver driver = new FtdiSerialDriver(usbDevice);
-            return Collections.singletonList(driver);
         }
     },
 
     CDC_ACM_SERIAL {
         @Override
-        public List<UsbSerialDriver> probe(UsbDevice usbDevice) {
-            if (!testIfSupported(usbDevice, CdcAcmSerialDriver.getSupportedDevices())) {
-               return Collections.emptyList();
+        public UsbSerialDriver getDevice(UsbDevice usbDevice) {
+            if (testIfSupported(usbDevice, CdcAcmSerialDriver.getSupportedDevices())) {
+               return new CdcAcmSerialDriver(usbDevice);
+            } else {
+                return null;
             }
-            final UsbSerialDriver driver = new CdcAcmSerialDriver(usbDevice);
-            return Collections.singletonList(driver);
         }
     },
 
     SILAB_SERIAL {
         @Override
-        public List<UsbSerialDriver> probe(final UsbDevice usbDevice) {
-            if (!testIfSupported(usbDevice, Cp2102SerialDriver.getSupportedDevices())) {
-                return Collections.emptyList();
+        public UsbSerialDriver getDevice(final UsbDevice usbDevice) {
+            if (testIfSupported(usbDevice, Cp2102SerialDriver.getSupportedDevices())) {
+                return new Cp2102SerialDriver(usbDevice);
+            } else {
+                return null;
             }
-            final UsbSerialDriver driver = new Cp2102SerialDriver(usbDevice);
-            return Collections.singletonList(driver);
         }
     },
 
     PROLIFIC_SERIAL {
         @Override
-        public List<UsbSerialDriver> probe(final UsbDevice usbDevice) {
-            if (!testIfSupported(usbDevice, ProlificSerialDriver.getSupportedDevices())) {
-                return Collections.emptyList();
+        public UsbSerialDriver getDevice(final UsbDevice usbDevice) {
+            if (testIfSupported(usbDevice, ProlificSerialDriver.getSupportedDevices())) {
+                return new ProlificSerialDriver(usbDevice);
+            } else {
+                return null;
             }
-            final UsbSerialDriver driver = new ProlificSerialDriver(usbDevice);
-            return Collections.singletonList(driver);
         }
     };
 
     /**
-     * Tests the supplied {@link UsbDevice} for compatibility with this enum
-     * member, returning one or more driver instances if compatible.
+     * Builds a new {@link UsbSerialDriver} instance from the raw device, or
+     * returns <code>null</code> if it could not be built (for example, if the
+     * probe failed).
      *
      * @param usbDevice the raw {@link UsbDevice} to use
-     * @return zero or more {@link UsbSerialDriver}, depending on compatibility
-     *         (never {@code null}).
+     * @return the first available {@link UsbSerialDriver}, or {@code null} if
+     *         no device could be acquired
      */
-    protected abstract List<UsbSerialDriver> probe(final UsbDevice usbDevice);
+    public abstract UsbSerialDriver getDevice(final UsbDevice usbDevice);
 
     /**
      * Creates and returns a new {@link UsbSerialDriver} instance for the first
@@ -123,11 +123,31 @@ public enum UsbSerialProber {
      */
     public static UsbSerialDriver findFirstDevice(final UsbManager usbManager) {
         for (final UsbDevice usbDevice : usbManager.getDeviceList().values()) {
-            for (final UsbSerialProber prober : values()) {
-                final List<UsbSerialDriver> probedDevices = prober.probe(usbDevice);
-                if (!probedDevices.isEmpty()) {
-                    return probedDevices.get(0);
-                }
+            final UsbSerialDriver probedDevice = probeSingleDevice(usbDevice);
+            if (probedDevice != null) {
+                return probedDevice;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Special method for testing a specific device for driver support,
+     * returning any compatible driver(s).
+     *
+     * <p/>
+     * Clients should ordinarily use {@link #findAllDevices(UsbManager)}, which
+     * operates against the entire bus of devices. This method is useful when
+     * testing against only a single target is desired.
+     *
+     * @param usbDevice the device to test against.
+     * @return a list containing zero or more {@link UsbSerialDriver} instances.
+     */
+    public static UsbSerialDriver probeSingleDevice(final UsbDevice usbDevice) {
+        for (final UsbSerialProber prober : values()) {
+            final UsbSerialDriver probedDevice = prober.getDevice(usbDevice);
+            if (probedDevice != null) {
+                return probedDevice;
             }
         }
         return null;
@@ -146,28 +166,10 @@ public enum UsbSerialProber {
 
         // For each UsbDevice, call probe() for each prober.
         for (final UsbDevice usbDevice : usbManager.getDeviceList().values()) {
-            result.addAll(probeSingleDevice(usbDevice));
-        }
-        return result;
-    }
-
-    /**
-     * Special method for testing a specific device for driver support,
-     * returning any compatible driver(s).
-     *
-     * <p/>
-     * Clients should ordinarily use {@link #findAllDevices(UsbManager)}, which
-     * operates against the entire bus of devices. This method is useful when
-     * testing against only a single target is desired.
-     *
-     * @param usbDevice the device to test against.
-     * @return a list containing zero or more {@link UsbSerialDriver} instances.
-     */
-    public static List<UsbSerialDriver> probeSingleDevice(final UsbDevice usbDevice) {
-        final List<UsbSerialDriver> result = new ArrayList<UsbSerialDriver>();
-        for (final UsbSerialProber prober : values()) {
-            final List<UsbSerialDriver> probedDevices = prober.probe(usbDevice);
-            result.addAll(probedDevices);
+            final UsbSerialDriver usbSerialDriver = probeSingleDevice(usbDevice);
+            if (usbSerialDriver != null) {
+                result.add(usbSerialDriver);
+            }
         }
         return result;
     }
