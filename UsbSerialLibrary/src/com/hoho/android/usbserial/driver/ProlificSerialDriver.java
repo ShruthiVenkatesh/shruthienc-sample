@@ -57,9 +57,6 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     private static final int PROLIFIC_CTRL_OUT_REQTYPE = UsbConstants.USB_DIR_OUT
             | UsbConstants.USB_TYPE_CLASS | USB_RECIP_INTERFACE;
 
-    private static final int PROLIFIC_CTRL_IN_REQTYPE = UsbConstants.USB_DIR_IN
-            | UsbConstants.USB_TYPE_CLASS | USB_RECIP_INTERFACE;
-
     private static final int WRITE_ENDPOINT = 0x02;
     private static final int READ_ENDPOINT = 0x83;
     private static final int INTERRUPT_ENDPOINT = 0x81;
