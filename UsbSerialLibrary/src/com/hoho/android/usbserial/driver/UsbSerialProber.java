@@ -103,11 +103,11 @@ public enum UsbSerialProber {
         @Override
         public List<UsbSerialDriver> probe(final UsbManager manager, final UsbDevice usbDevice) {
             if (!testIfSupported(usbDevice, ProlificSerialDriver.getSupportedDevices())) {
-                return null;
+                return Collections.emptyList();
             }
             final UsbDeviceConnection connection = manager.openDevice(usbDevice);
             if (connection == null) {
-                return null;
+                return Collections.emptyList();
             }
             final UsbSerialDriver driver = new ProlificSerialDriver(usbDevice, connection);
             return Collections.singletonList(driver);
