@@ -40,38 +40,38 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class ProlificSerialDriver extends CommonUsbSerialDriver {
-    public static final int USB_READ_TIMEOUT_MILLIS = 1000;
-    public static final int USB_WRITE_TIMEOUT_MILLIS = 5000;
+    private static final int USB_READ_TIMEOUT_MILLIS = 1000;
+    private static final int USB_WRITE_TIMEOUT_MILLIS = 5000;
 
-    public static final int USB_RECIP_INTERFACE = 0x01;
+    private static final int USB_RECIP_INTERFACE = 0x01;
 
-    public static final int PROLIFIC_VENDOR_READ_REQUEST = 0x01;
-    public static final int PROLIFIC_VENDOR_WRITE_REQUEST = 0x01;
+    private static final int PROLIFIC_VENDOR_READ_REQUEST = 0x01;
+    private static final int PROLIFIC_VENDOR_WRITE_REQUEST = 0x01;
 
-    public static final int PROLIFIC_VENDOR_OUT_REQTYPE = UsbConstants.USB_DIR_OUT
+    private static final int PROLIFIC_VENDOR_OUT_REQTYPE = UsbConstants.USB_DIR_OUT
             | UsbConstants.USB_TYPE_VENDOR;
 
-    public static final int PROLIFIC_VENDOR_IN_REQTYPE = UsbConstants.USB_DIR_IN
+    private static final int PROLIFIC_VENDOR_IN_REQTYPE = UsbConstants.USB_DIR_IN
             | UsbConstants.USB_TYPE_VENDOR;
 
-    public static final int PROLIFIC_CTRL_OUT_REQTYPE = UsbConstants.USB_DIR_OUT
+    private static final int PROLIFIC_CTRL_OUT_REQTYPE = UsbConstants.USB_DIR_OUT
             | UsbConstants.USB_TYPE_CLASS | USB_RECIP_INTERFACE;
 
-    public static final int PROLIFIC_CTRL_IN_REQTYPE = UsbConstants.USB_DIR_IN
+    private static final int PROLIFIC_CTRL_IN_REQTYPE = UsbConstants.USB_DIR_IN
             | UsbConstants.USB_TYPE_CLASS | USB_RECIP_INTERFACE;
 
-    public static final int WRITE_ENDPOINT = 0x02;
-    public static final int READ_ENDPOINT = 0x83;
-    public static final int INTERRUPT_ENDPOINT = 0x81;
+    private static final int WRITE_ENDPOINT = 0x02;
+    private static final int READ_ENDPOINT = 0x83;
+    private static final int INTERRUPT_ENDPOINT = 0x81;
 
-    public static final int FLUSH_RX_REQUEST = 0x08;
-    public static final int FLUSH_TX_REQUEST = 0x09;
+    private static final int FLUSH_RX_REQUEST = 0x08;
+    private static final int FLUSH_TX_REQUEST = 0x09;
 
-    public static final int SET_LINE_REQUEST = 0x20;
-    public static final int SET_CONTROL_REQUEST = 0x22;
+    private static final int SET_LINE_REQUEST = 0x20;
+    private static final int SET_CONTROL_REQUEST = 0x22;
 
-    public static final int CONTROL_DTR = 0x01;
-    public static final int CONTROL_RTS = 0x02;
+    private static final int CONTROL_DTR = 0x01;
+    private static final int CONTROL_RTS = 0x02;
 
     private static final int STATUS_FLAG_CD = 0x01;
     private static final int STATUS_FLAG_DSR = 0x02;
