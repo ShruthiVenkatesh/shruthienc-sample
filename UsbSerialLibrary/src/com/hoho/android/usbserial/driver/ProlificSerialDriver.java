@@ -62,6 +62,7 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
 
     public static final int WRITE_ENDPOINT = 0x02;
     public static final int READ_ENDPOINT = 0x83;
+    public static final int INTERRUPT_ENDPOINT = 0x81;
 
     public static final int FLUSH_RX_REQUEST = 0x08;
     public static final int FLUSH_TX_REQUEST = 0x09;
@@ -72,6 +73,14 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     public static final int CONTROL_DTR = 0x01;
     public static final int CONTROL_RTS = 0x02;
 
+    private static final int STATUS_FLAG_CD = 0x01;
+    private static final int STATUS_FLAG_DSR = 0x02;
+    private static final int STATUS_FLAG_RI = 0x08;
+    private static final int STATUS_FLAG_CTS = 0x80;
+
+    private static final int STATUS_BUFFER_SIZE = 10;
+    private static final int STATUS_BYTE_IDX = 8;
+
     private static final int DEVICE_TYPE_HX = 0;
     private static final int DEVICE_TYPE_0 = 1;
     private static final int DEVICE_TYPE_1 = 2;
@@ -80,11 +89,17 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
 
     private UsbEndpoint mReadEndpoint;
     private UsbEndpoint mWriteEndpoint;
+    private UsbEndpoint mInterruptEndpoint;
 
     private int mControlLinesValue = 0;
 
     private int mBaudRate = -1, mDataBits = -1, mStopBits = -1, mParity = -1;
 
+    private int mStatus = 0;
+    private volatile Thread mReadStatusThread = null;
+    private final Object mReadStatusThreadLock = new Object();
+    boolean mStopReadStatusThread = false;
+    private IOException mReadStatusException = null;
 
     private final String TAG = ProlificSerialDriver.class.getSimpleName();
 
@@ -154,6 +169,71 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         mControlLinesValue = newControlLinesValue;
     }
 
+    private final void readStatusThreadFunction() {
+        try {
+            while (!mStopReadStatusThread) {
+                byte[] buffer = new byte[STATUS_BUFFER_SIZE];
+                int readBytesCount = mConnection.bulkTransfer(mInterruptEndpoint,
+                        buffer,
+                        STATUS_BUFFER_SIZE,
+                        500);
+                if (readBytesCount > 0) {
+                    if (readBytesCount == STATUS_BUFFER_SIZE) {
+                        mStatus = buffer[STATUS_BYTE_IDX] & 0xff;
+                    } else {
+                        throw new IOException(
+                                String.format("Invalid CTS / DSR / CD / RI status buffer received, expected %d bytes, but received %d",
+                                        STATUS_BUFFER_SIZE,
+                                        readBytesCount));
+                    }
+                }
+            }
+        } catch (IOException e) {
+            mReadStatusException = e;
+        }
+    }
+
+    private final int getStatus() throws IOException {
+        if ((mReadStatusThread == null) && (mReadStatusException == null)) {
+            synchronized (mReadStatusThreadLock) {
+                if (mReadStatusThread == null) {
+                    byte[] buffer = new byte[STATUS_BUFFER_SIZE];
+                    int readBytes = mConnection.bulkTransfer(mInterruptEndpoint,
+                            buffer,
+                            STATUS_BUFFER_SIZE,
+                            100);
+                    if (readBytes != STATUS_BUFFER_SIZE) {
+                        Log.w(TAG, "Could not read initial CTS / DSR / CD / RI status");
+                    } else {
+                        mStatus = buffer[STATUS_BYTE_IDX] & 0xff;
+                    }
+
+                    mReadStatusThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            readStatusThreadFunction();
+                        }
+                    });
+                    mReadStatusThread.setDaemon(true);
+                    mReadStatusThread.start();
+                }
+            }
+        }
+
+        /* throw and clear an exception which occured in the status read thread */
+        IOException readStatusException = mReadStatusException;
+        if (mReadStatusException != null) {
+            mReadStatusException = null;
+            throw readStatusException;
+        }
+        
+        return mStatus;
+    }
+
+    private final boolean testStatusFlag(int flag) throws IOException {
+        return ((getStatus() & flag) == flag);
+    }
+
     public ProlificSerialDriver(UsbDevice device, UsbDeviceConnection connection) {
         super(device, connection);
     }
@@ -178,6 +258,10 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
 
                 case WRITE_ENDPOINT:
                     mWriteEndpoint = currentEndpoint;
+                    break;
+
+                case INTERRUPT_ENDPOINT:
+                    mInterruptEndpoint = currentEndpoint;
                     break;
                 }
             }
@@ -231,6 +315,17 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     @Override
     public void close() throws IOException {
         try {
+            mStopReadStatusThread = true;
+            synchronized (mReadStatusThreadLock) {
+                if (mReadStatusThread != null) {
+                    try {
+                        mReadStatusThread.join();
+                    } catch (Exception e) {
+                        Log.w(TAG, "An error occured while waiting for status read thread", e);
+                    }
+                }
+            }
+
             resetDevice();
         } finally {
             mConnection.releaseInterface(mDevice.getInterface(0));
@@ -348,24 +443,24 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         mDataBits = dataBits;
         mStopBits = stopBits;
         mParity = parity;
+        
+        //TODO: TEST CODE
+        getStatus();
     }
 
     @Override
     public boolean getCD() throws IOException {
-        // TODO: Unimplemented!
-        throw new UnsupportedOperationException();
+        return testStatusFlag(STATUS_FLAG_CD);
     }
 
     @Override
     public boolean getCTS() throws IOException {
-        // TODO: Unimplemented!
-        throw new UnsupportedOperationException();
+        return testStatusFlag(STATUS_FLAG_CTS);
     }
 
     @Override
     public boolean getDSR() throws IOException {
-        // TODO: Unimplemented!
-        throw new UnsupportedOperationException();
+        return testStatusFlag(STATUS_FLAG_DSR);
     }
 
     @Override
@@ -386,8 +481,7 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
 
     @Override
     public boolean getRI() throws IOException {
-        // TODO: Unimplemented!
-        throw new UnsupportedOperationException();
+        return testStatusFlag(STATUS_FLAG_RI);
     }
 
     @Override
