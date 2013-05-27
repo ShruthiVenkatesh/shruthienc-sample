@@ -24,23 +24,29 @@ public class CdcAcmSerialDriver extends CommonUsbSerialDriver {
 
     private final String TAG = CdcAcmSerialDriver.class.getSimpleName();
 
-    private UsbInterface mControlInterface;
-    private UsbInterface mDataInterface;
-
-    private UsbEndpoint mControlEndpoint;
-    private UsbEndpoint mReadEndpoint;
-    private UsbEndpoint mWriteEndpoint;
+    protected UsbEndpoint mControlEndpoint;
+    protected UsbEndpoint mReadEndpoint;
+    protected UsbEndpoint mWriteEndpoint;
 
     private boolean mRts = false;
     private boolean mDtr = false;
 
     private static final int USB_RECIP_INTERFACE = 0x01;
-    private static final int USB_RT_ACM = UsbConstants.USB_TYPE_CLASS | USB_RECIP_INTERFACE;
+    private static final int USB_RT_ACM = UsbConstants.USB_DIR_OUT
+            | UsbConstants.USB_TYPE_CLASS
+            | USB_RECIP_INTERFACE;
 
     private static final int SET_LINE_CODING = 0x20;  // USB CDC 1.1 section 6.2
     private static final int GET_LINE_CODING = 0x21;
     private static final int SET_CONTROL_LINE_STATE = 0x22;
     private static final int SEND_BREAK = 0x23;
+
+    protected static final int STATUS_FLAG_CD = 0x01;
+    protected static final int STATUS_FLAG_DSR = 0x02;
+    protected static final int STATUS_FLAG_RI = 0x08;
+    protected static final int STATUS_FLAG_CTS = 0x80;
+
+    protected int mBaudRate = -1, mDataBits = -1, mStopBits = -1, mParity = -1;
 
     public CdcAcmSerialDriver(UsbDevice device) {
         super(device);
@@ -49,37 +55,38 @@ public class CdcAcmSerialDriver extends CommonUsbSerialDriver {
     @Override
     public void open(UsbManager usbManager) throws IOException, AccessControlException {
         super.open(usbManager);
+        initEndpoints();
+    }
 
-        Log.d(TAG, "claiming interfaces, count=" + mDevice.getInterfaceCount());
+    protected int sendAcmControlMessage(int request, int value, byte[] buf) {
+        return mConnection.controlTransfer(
+                USB_RT_ACM, request, value, 0, buf, buf != null ? buf.length : 0, 5000);
+    }
 
+    protected void initEndpoints() throws IOException {
         Log.d(TAG, "Claiming control interface.");
-        mControlInterface = mDevice.getInterface(0);
-        Log.d(TAG, "Control iface=" + mControlInterface);
+        UsbInterface controlInterface = mDevice.getInterface(0);
+        Log.d(TAG, "Control iface=" + controlInterface);
         // class should be USB_CLASS_COMM
 
-        if (!mConnection.claimInterface(mControlInterface, true)) {
+        if (!mConnection.claimInterface(controlInterface, true)) {
             throw new IOException("Could not claim control interface.");
         }
-        mControlEndpoint = mControlInterface.getEndpoint(0);
+        mControlEndpoint = controlInterface.getEndpoint(0);
         Log.d(TAG, "Control endpoint direction: " + mControlEndpoint.getDirection());
 
         Log.d(TAG, "Claiming data interface.");
-        mDataInterface = mDevice.getInterface(1);
-        Log.d(TAG, "data iface=" + mDataInterface);
+        UsbInterface dataInterface = mDevice.getInterface(1);
+        Log.d(TAG, "data iface=" + dataInterface);
         // class should be USB_CLASS_CDC_DATA
 
-        if (!mConnection.claimInterface(mDataInterface, true)) {
+        if (!mConnection.claimInterface(dataInterface, true)) {
             throw new IOException("Could not claim data interface.");
         }
-        mReadEndpoint = mDataInterface.getEndpoint(1);
+        mReadEndpoint = dataInterface.getEndpoint(1);
         Log.d(TAG, "Read endpoint direction: " + mReadEndpoint.getDirection());
-        mWriteEndpoint = mDataInterface.getEndpoint(0);
+        mWriteEndpoint = dataInterface.getEndpoint(0);
         Log.d(TAG, "Write endpoint direction: " + mWriteEndpoint.getDirection());
-    }
-
-    private int sendAcmControlMessage(int request, int value, byte[] buf) {
-        return mConnection.controlTransfer(
-                USB_RT_ACM, request, value, 0, buf, buf != null ? buf.length : 0, 5000);
     }
 
     @Override
@@ -142,7 +149,13 @@ public class CdcAcmSerialDriver extends CommonUsbSerialDriver {
     }
 
     @Override
-    public void setParameters(int baudRate, int dataBits, int stopBits, int parity) {
+    public void setParameters(int baudRate, int dataBits, int stopBits, int parity) throws IOException {
+        if ((mBaudRate == baudRate) && (mDataBits == dataBits)
+                && (mStopBits == stopBits) && (mParity == parity)) {
+            // Make sure no action is performed if there is nothing to change
+            return;
+        }
+
         byte stopBitsByte;
         switch (stopBits) {
             case STOPBITS_1: stopBitsByte = 0; break;
@@ -170,6 +183,11 @@ public class CdcAcmSerialDriver extends CommonUsbSerialDriver {
                 parityBitesByte,
                 (byte) dataBits};
         sendAcmControlMessage(SET_LINE_CODING, 0, msg);
+
+        mBaudRate = baudRate;
+        mDataBits = dataBits;
+        mStopBits = stopBits;
+        mParity = parity;
     }
 
     @Override

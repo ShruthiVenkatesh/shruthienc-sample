@@ -40,11 +40,9 @@ import java.security.AccessControlException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class ProlificSerialDriver extends CommonUsbSerialDriver {
+public class ProlificSerialDriver extends CdcAcmSerialDriver {
     private static final int USB_READ_TIMEOUT_MILLIS = 1000;
     private static final int USB_WRITE_TIMEOUT_MILLIS = 5000;
-
-    private static final int USB_RECIP_INTERFACE = 0x01;
 
     private static final int PROLIFIC_VENDOR_READ_REQUEST = 0x01;
     private static final int PROLIFIC_VENDOR_WRITE_REQUEST = 0x01;
@@ -55,26 +53,8 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     private static final int PROLIFIC_VENDOR_IN_REQTYPE = UsbConstants.USB_DIR_IN
             | UsbConstants.USB_TYPE_VENDOR;
 
-    private static final int PROLIFIC_CTRL_OUT_REQTYPE = UsbConstants.USB_DIR_OUT
-            | UsbConstants.USB_TYPE_CLASS | USB_RECIP_INTERFACE;
-
-    private static final int WRITE_ENDPOINT = 0x02;
-    private static final int READ_ENDPOINT = 0x83;
-    private static final int INTERRUPT_ENDPOINT = 0x81;
-
     private static final int FLUSH_RX_REQUEST = 0x08;
     private static final int FLUSH_TX_REQUEST = 0x09;
-
-    private static final int SET_LINE_REQUEST = 0x20;
-    private static final int SET_CONTROL_REQUEST = 0x22;
-
-    private static final int CONTROL_DTR = 0x01;
-    private static final int CONTROL_RTS = 0x02;
-
-    private static final int STATUS_FLAG_CD = 0x01;
-    private static final int STATUS_FLAG_DSR = 0x02;
-    private static final int STATUS_FLAG_RI = 0x08;
-    private static final int STATUS_FLAG_CTS = 0x80;
 
     private static final int STATUS_BUFFER_SIZE = 10;
     private static final int STATUS_BYTE_IDX = 8;
@@ -84,14 +64,6 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     private static final int DEVICE_TYPE_1 = 2;
 
     private int mDeviceType = DEVICE_TYPE_HX;
-
-    private UsbEndpoint mReadEndpoint;
-    private UsbEndpoint mWriteEndpoint;
-    private UsbEndpoint mInterruptEndpoint;
-
-    private int mControlLinesValue = 0;
-
-    private int mBaudRate = -1, mDataBits = -1, mStopBits = -1, mParity = -1;
 
     private int mStatus = 0;
     private volatile Thread mReadStatusThread = null;
@@ -138,12 +110,6 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
                 PROLIFIC_VENDOR_WRITE_REQUEST, value, index, data);
     }
 
-    private final void ctrlOut(int request, int value, int index, byte[] data)
-            throws IOException {
-        outControlTransfer(PROLIFIC_CTRL_OUT_REQTYPE, request, value, index,
-                data);
-    }
-
     private void doBlackMagic() throws IOException {
         vendorIn(0x8484, 0, 1);
         vendorOut(0x0404, 0, null);
@@ -162,22 +128,18 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
         flush(true, true);
     }
 
-    private void setControlLines(int newControlLinesValue) throws IOException {
-        ctrlOut(SET_CONTROL_REQUEST, newControlLinesValue, 0, null);
-        mControlLinesValue = newControlLinesValue;
-    }
-
     private final void readStatusThreadFunction() {
         try {
             while (!mStopReadStatusThread) {
                 byte[] buffer = new byte[STATUS_BUFFER_SIZE];
-                int readBytesCount = mConnection.bulkTransfer(mInterruptEndpoint,
+                int readBytesCount = mConnection.bulkTransfer(mControlEndpoint,
                         buffer,
                         STATUS_BUFFER_SIZE,
                         500);
                 if (readBytesCount > 0) {
                     if (readBytesCount == STATUS_BUFFER_SIZE) {
                         mStatus = buffer[STATUS_BYTE_IDX] & 0xff;
+                        Log.i(TAG, "mStatus: " + mStatus);
                     } else {
                         throw new IOException(
                                 String.format("Invalid CTS / DSR / CD / RI status buffer received, expected %d bytes, but received %d",
@@ -196,7 +158,7 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
             synchronized (mReadStatusThreadLock) {
                 if (mReadStatusThread == null) {
                     byte[] buffer = new byte[STATUS_BUFFER_SIZE];
-                    int readBytes = mConnection.bulkTransfer(mInterruptEndpoint,
+                    int readBytes = mConnection.bulkTransfer(mControlEndpoint,
                             buffer,
                             STATUS_BUFFER_SIZE,
                             100);
@@ -204,6 +166,7 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
                         Log.w(TAG, "Could not read initial CTS / DSR / CD / RI status");
                     } else {
                         mStatus = buffer[STATUS_BYTE_IDX] & 0xff;
+                        Log.i(TAG, "mStatus: " + mStatus);
                     }
 
                     mReadStatusThread = new Thread(new Runnable() {
@@ -224,12 +187,71 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
             mReadStatusException = null;
             throw readStatusException;
         }
-        
+
         return mStatus;
     }
 
     private final boolean testStatusFlag(int flag) throws IOException {
         return ((getStatus() & flag) == flag);
+    }
+
+    private final void detectSubtype() {
+        if (mDevice.getDeviceClass() == 0x02) {
+            mDeviceType = DEVICE_TYPE_0;
+        } else {
+            try {
+                Method getRawDescriptorsMethod
+                    = mConnection.getClass().getMethod("getRawDescriptors");
+                byte[] rawDescriptors
+                    = (byte[]) getRawDescriptorsMethod.invoke(mConnection);
+                byte maxPacketSize0 = rawDescriptors[7];
+                if (maxPacketSize0 == 64) {
+                    mDeviceType = DEVICE_TYPE_HX;
+                } else if ((mDevice.getDeviceClass() == 0x00)
+                        || (mDevice.getDeviceClass() == 0xff)) {
+                    mDeviceType = DEVICE_TYPE_1;
+                } else {
+                  Log.w(TAG, "Could not detect PL2303 subtype, "
+                      + "Assuming that it is a HX device");
+                  mDeviceType = DEVICE_TYPE_HX;
+                }
+            } catch (NoSuchMethodException e) {
+                Log.w(TAG, "Method UsbDeviceConnection.getRawDescriptors, "
+                        + "required for PL2303 subtype detection, not "
+                        + "available! Assuming that it is a HX device");
+                mDeviceType = DEVICE_TYPE_HX;
+            } catch (Exception e) {
+                Log.e(TAG, "An unexpected exception occured while trying "
+                        + "to detect PL2303 subtype", e);
+            }
+        }
+    }
+
+    @Override
+    protected void initEndpoints() throws IOException {
+        UsbInterface usbInterface = mDevice.getInterface(0);
+
+        if (!mConnection.claimInterface(usbInterface, true)) {
+            throw new IOException("Error claiming Prolific interface 0");
+        }
+
+        for (int i = 0; i < usbInterface.getEndpointCount(); ++i) {
+            UsbEndpoint currentEndpoint = usbInterface.getEndpoint(i);
+
+            switch (currentEndpoint.getType()) {
+            case UsbConstants.USB_ENDPOINT_XFER_BULK:
+                if (currentEndpoint.getDirection() == UsbConstants.USB_DIR_IN) {
+                    mReadEndpoint = currentEndpoint;
+                } else {
+                    mWriteEndpoint = currentEndpoint;
+                }
+                break;
+
+            case UsbConstants.USB_ENDPOINT_XFER_INT:
+                mControlEndpoint = currentEndpoint;
+                break;
+            }
+        }
     }
 
     public ProlificSerialDriver(UsbDevice device) {
@@ -240,76 +262,9 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     public void open(UsbManager usbManager) throws IOException, AccessControlException {
         super.open(usbManager);
 
-        UsbInterface usbInterface = mDevice.getInterface(0);
-
-        if (!mConnection.claimInterface(usbInterface, true)) {
-            throw new IOException("Error claiming Prolific interface 0");
-        }
-
-        boolean openSuccessful = false;
-        try {
-            for (int i = 0; i < usbInterface.getEndpointCount(); ++i) {
-                UsbEndpoint currentEndpoint = usbInterface.getEndpoint(i);
-
-                switch (currentEndpoint.getAddress()) {
-                case READ_ENDPOINT:
-                    mReadEndpoint = currentEndpoint;
-                    break;
-
-                case WRITE_ENDPOINT:
-                    mWriteEndpoint = currentEndpoint;
-                    break;
-
-                case INTERRUPT_ENDPOINT:
-                    mInterruptEndpoint = currentEndpoint;
-                    break;
-                }
-            }
-
-            if (mDevice.getDeviceClass() == 0x02) {
-                mDeviceType = DEVICE_TYPE_0;
-            } else {
-                try {
-                    Method getRawDescriptorsMethod
-                        = mConnection.getClass().getMethod("getRawDescriptors");
-                    byte[] rawDescriptors
-                        = (byte[]) getRawDescriptorsMethod.invoke(mConnection);
-                    byte maxPacketSize0 = rawDescriptors[7];
-                    if (maxPacketSize0 == 64) {
-                        mDeviceType = DEVICE_TYPE_HX;
-                    } else if ((mDevice.getDeviceClass() == 0x00)
-                            || (mDevice.getDeviceClass() == 0xff)) {
-                        mDeviceType = DEVICE_TYPE_1;
-                    } else {
-                      Log.w(TAG, "Could not detect PL2303 subtype, "
-                          + "Assuming that it is a HX device");
-                      mDeviceType = DEVICE_TYPE_HX;
-                    }
-                } catch (NoSuchMethodException e) {
-                    Log.w(TAG, "Method UsbDeviceConnection.getRawDescriptors, "
-                            + "required for PL2303 subtype detection, not "
-                            + "available! Assuming that it is a HX device");
-                    mDeviceType = DEVICE_TYPE_HX;
-                } catch (Exception e) {
-                    Log.e(TAG, "An unexpected exception occured while trying "
-                            + "to detect PL2303 subtype", e);
-                }
-            }
-
-            setControlLines(mControlLinesValue);
-            resetDevice();
-
-            doBlackMagic();
-            openSuccessful = true;
-        } finally {
-            if (!openSuccessful) {
-              try {
-                mConnection.releaseInterface(usbInterface);
-              } catch (Exception ingored) {
-                // Do not cover possible exceptions
-              }
-            }
-        }
+        detectSubtype();
+        resetDevice();
+        doBlackMagic();
     }
 
     @Override
@@ -325,60 +280,11 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
                     }
                 }
             }
-
+    
             resetDevice();
         } finally {
-            mConnection.releaseInterface(mDevice.getInterface(0));
+            super.close();
         }
-    }
-
-    @Override
-    public int read(byte[] dest, int timeoutMillis) throws IOException {
-        synchronized (mReadBufferLock) {
-            int readAmt = Math.min(dest.length, mReadBuffer.length);
-            int numBytesRead = mConnection.bulkTransfer(mReadEndpoint, mReadBuffer,
-                    readAmt, timeoutMillis);
-            if (numBytesRead < 0) {
-                return 0;
-            }
-            System.arraycopy(mReadBuffer, 0, dest, 0, numBytesRead);
-            return numBytesRead;
-        }
-    }
-
-    @Override
-    public int write(byte[] src, int timeoutMillis) throws IOException {
-        int offset = 0;
-
-        while (offset < src.length) {
-            final int writeLength;
-            final int amtWritten;
-
-            synchronized (mWriteBufferLock) {
-                final byte[] writeBuffer;
-
-                writeLength = Math.min(src.length - offset, mWriteBuffer.length);
-                if (offset == 0) {
-                    writeBuffer = src;
-                } else {
-                    // bulkTransfer does not support offsets, make a copy.
-                    System.arraycopy(src, offset, mWriteBuffer, 0, writeLength);
-                    writeBuffer = mWriteBuffer;
-                }
-
-                amtWritten = mConnection.bulkTransfer(mWriteEndpoint,
-                        writeBuffer, writeLength, timeoutMillis);
-            }
-
-            if (amtWritten <= 0) {
-                throw new IOException("Error writing " + writeLength
-                        + " bytes at offset " + offset + " length="
-                        + src.length);
-            }
-
-            offset += amtWritten;
-        }
-        return offset;
     }
 
     @Override
@@ -390,59 +296,8 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
             return;
         }
 
-        byte[] lineRequestData = new byte[7];
-
-        lineRequestData[0] = (byte) (baudRate & 0xff);
-        lineRequestData[1] = (byte) ((baudRate >> 8) & 0xff);
-        lineRequestData[2] = (byte) ((baudRate >> 16) & 0xff);
-        lineRequestData[3] = (byte) ((baudRate >> 24) & 0xff);
-
-        switch (stopBits) {
-        case STOPBITS_1:
-            lineRequestData[4] = 0;
-            break;
-
-        case STOPBITS_1_5:
-            lineRequestData[4] = 1;
-            break;
-
-        case STOPBITS_2:
-            lineRequestData[4] = 2;
-            break;
-        }
-
-        switch (parity) {
-        case PARITY_NONE:
-            lineRequestData[5] = 0;
-            break;
-
-        case PARITY_ODD:
-            lineRequestData[5] = 1;
-            break;
-
-        case PARITY_EVEN:
-            lineRequestData[5] = 2;
-            break;
-
-        case PARITY_MARK:
-            lineRequestData[5] = 3;
-            break;
-
-        case PARITY_SPACE:
-            lineRequestData[5] = 4;
-            break;
-        }
-
-        lineRequestData[6] = (byte) dataBits;
-
-        ctrlOut(SET_LINE_REQUEST, 0, 0, lineRequestData);
-
+        super.setParameters(baudRate, dataBits, stopBits, parity);
         resetDevice();
-
-        mBaudRate = baudRate;
-        mDataBits = dataBits;
-        mStopBits = stopBits;
-        mParity = parity;
     }
 
     @Override
@@ -461,40 +316,8 @@ public class ProlificSerialDriver extends CommonUsbSerialDriver {
     }
 
     @Override
-    public boolean getDTR() throws IOException {
-        return ((mControlLinesValue & CONTROL_DTR) == CONTROL_DTR);
-    }
-
-    @Override
-    public void setDTR(boolean value) throws IOException {
-        int newControlLinesValue;
-        if (value) {
-            newControlLinesValue = mControlLinesValue | CONTROL_DTR;
-        } else {
-            newControlLinesValue = mControlLinesValue & ~CONTROL_DTR;
-        }
-        setControlLines(newControlLinesValue);
-    }
-
-    @Override
     public boolean getRI() throws IOException {
         return testStatusFlag(STATUS_FLAG_RI);
-    }
-
-    @Override
-    public boolean getRTS() throws IOException {
-        return ((mControlLinesValue & CONTROL_RTS) == CONTROL_RTS);
-    }
-
-    @Override
-    public void setRTS(boolean value) throws IOException {
-        int newControlLinesValue;
-        if (value) {
-            newControlLinesValue = mControlLinesValue | CONTROL_RTS;
-        } else {
-            newControlLinesValue = mControlLinesValue & ~CONTROL_RTS;
-        }
-        setControlLines(newControlLinesValue);
     }
 
     @Override
