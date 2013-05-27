@@ -125,7 +125,7 @@ public class ProlificSerialDriver extends CdcAcmSerialDriver {
     }
 
     private void resetDevice() throws IOException {
-        flush(true, true);
+        flushHwBuffers(true, true);
     }
 
     private final void readStatusThreadFunction() {
@@ -321,12 +321,12 @@ public class ProlificSerialDriver extends CdcAcmSerialDriver {
     }
 
     @Override
-    public boolean flush(boolean flushRX, boolean flushTX) throws IOException {
-        if (flushRX) {
+    public boolean flushHwBuffers(boolean flushReadBuffers, boolean flushWriteBuffers) throws IOException {
+        if (flushReadBuffers) {
             vendorOut(FLUSH_RX_REQUEST, 0, null);
         }
 
-        if (flushTX) {
+        if (flushWriteBuffers) {
             vendorOut(FLUSH_TX_REQUEST, 0, null);
         }
 

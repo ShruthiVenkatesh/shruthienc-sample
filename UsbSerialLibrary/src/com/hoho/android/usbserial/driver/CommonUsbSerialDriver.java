@@ -157,7 +157,7 @@ abstract class CommonUsbSerialDriver implements UsbSerialDriver {
     public abstract void setRTS(boolean value) throws IOException;
 
     @Override
-    public boolean flush(boolean flushRX, boolean flushTX) throws IOException {
+    public boolean flushHwBuffers(boolean flushReadBuffers, boolean flushWriteBuffers) throws IOException {
         return false;
     }
 
