@@ -15,7 +15,6 @@ import android.hardware.usb.UsbRequest;
 import android.util.Log;
 
 public class Cp2102SerialDriver extends CommonUsbSerialDriver {
-    
     private static final String TAG = Cp2102SerialDriver.class.getSimpleName();
     
     private static final int DEFAULT_BAUD_RATE = 9600;
@@ -35,6 +34,10 @@ public class Cp2102SerialDriver extends CommonUsbSerialDriver {
     private static final int SILABSER_SET_LINE_CTL_REQUEST_CODE = 0x03;
     private static final int SILABSER_SET_MHS_REQUEST_CODE = 0x07;
     private static final int SILABSER_SET_BAUDRATE = 0x1E;
+    private static final int SILABSER_FLUSH_REQUEST_CODE = 0x12;
+    
+    private static final int FLUSH_READ_CODE = 0x0a;
+    private static final int FLUSH_WRITE_CODE = 0x05;
     
     /*
      * SILABSER_IFC_ENABLE_REQUEST_CODE
@@ -260,6 +263,19 @@ public class Cp2102SerialDriver extends CommonUsbSerialDriver {
 
     @Override
     public boolean getRTS() throws IOException {
+        return true;
+    }
+
+    @Override
+    public boolean flushHwBuffers(boolean flushReadBuffers,
+            boolean flushWriteBuffers) throws IOException {
+        int value = (flushReadBuffers ? FLUSH_READ_CODE : 0)
+                | (flushWriteBuffers ? FLUSH_WRITE_CODE : 0);
+
+        if (value != 0) {
+            setConfigSingle(SILABSER_FLUSH_REQUEST_CODE, value);
+        }
+
         return true;
     }
 
