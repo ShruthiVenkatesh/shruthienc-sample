@@ -158,7 +158,7 @@ abstract class CommonUsbSerialDriver implements UsbSerialDriver {
 
     @Override
     public boolean flushHwBuffers(boolean flushReadBuffers, boolean flushWriteBuffers) throws IOException {
-        return false;
+        return !flushReadBuffers && !flushWriteBuffers;
     }
 
 }
