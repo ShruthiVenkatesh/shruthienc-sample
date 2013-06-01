@@ -160,10 +160,6 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
         TYPE_BM, TYPE_AM, TYPE_2232C, TYPE_R, TYPE_2232H, TYPE_4232H;
     }
 
-    private int mInterface = 0; /* INTERFACE_ANY */
-
-    private int mMaxPacketSize = 64; // TODO(mikey): detect
-
     /**
      * Filter FTDI status bytes from buffer
      * @param src The source buffer (which contains status bytes)
