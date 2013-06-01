@@ -24,6 +24,7 @@ import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
+import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
 
@@ -148,6 +149,10 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
 
     private DeviceType mType;
 
+    private UsbEndpoint mReadEndpoint;
+    private UsbEndpoint mWriteEndpoint;
+    private int mReadEndpointMaxPacketSize;
+
     /**
      * FTDI chip types.
      */
@@ -223,6 +228,12 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
                 }
             }
             reset();
+
+            UsbInterface usbInterface = mDevice.getInterface(0);
+            mReadEndpoint = usbInterface.getEndpoint(0);
+            mWriteEndpoint = usbInterface.getEndpoint(1);
+            mReadEndpointMaxPacketSize = mReadEndpoint.getMaxPacketSize();
+
             opened = true;
         } finally {
             if (!opened) {
@@ -239,20 +250,18 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
     @Override
     public int read(final byte[] dest,
             final int timeoutMillis) throws IOException {
-        final UsbEndpoint endpoint = mDevice.getInterface(0).getEndpoint(0);
-        final int count = mConnection.bulkTransfer(endpoint, dest, dest.length, timeoutMillis);
+        final int count = mConnection.bulkTransfer(mReadEndpoint, dest, dest.length, timeoutMillis);
         return (count < MODEM_STATUS_HEADER_LENGTH)
                 ? 0
                 : filterStatusBytes(dest,
                         dest,
                         count,
-                        endpoint.getMaxPacketSize());
+                        mReadEndpointMaxPacketSize);
     }
 
     @Override
     public int write(byte[] src, final int length, int timeoutMillis) throws IOException {
-        final UsbEndpoint endpoint = mDevice.getInterface(0).getEndpoint(1);
-        final int count = mConnection.bulkTransfer(endpoint, src, length, timeoutMillis);
+        final int count = mConnection.bulkTransfer(mWriteEndpoint, src, length, timeoutMillis);
         return (count < 0) ? 0 : count;
     }
 
