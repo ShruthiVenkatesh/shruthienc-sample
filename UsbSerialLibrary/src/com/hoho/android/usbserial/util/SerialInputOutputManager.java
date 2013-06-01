@@ -24,6 +24,7 @@ import android.hardware.usb.UsbRequest;
 import android.util.Log;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialPort;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,7 +43,7 @@ public class SerialInputOutputManager implements Runnable {
     private static final int READ_WAIT_MILLIS = 200;
     private static final int BUFSIZ = 4096;
 
-    private final UsbSerialDriver mDriver;
+    private final UsbSerialPort mPort;
 
     private final ByteBuffer mReadBuffer = ByteBuffer.allocate(BUFSIZ);
 
@@ -84,8 +85,8 @@ public class SerialInputOutputManager implements Runnable {
     /**
      * Creates a new instance with the provided listener.
      */
-    public SerialInputOutputManager(UsbSerialDriver driver, Listener listener) {
-        mDriver = driver;
+    public SerialInputOutputManager(UsbSerialPort driver, Listener listener) {
+        mPort = driver;
         mListener = listener;
     }
 
@@ -155,7 +156,7 @@ public class SerialInputOutputManager implements Runnable {
 
     private void step() throws IOException {
         // Handle incoming data.
-        int len = mDriver.read(mReadBuffer.array(), READ_WAIT_MILLIS);
+        int len = mPort.read(mReadBuffer.array(), READ_WAIT_MILLIS);
         if (len > 0) {
             if (DEBUG) Log.d(TAG, "Read data len=" + len);
             final Listener listener = getListener();
@@ -182,7 +183,7 @@ public class SerialInputOutputManager implements Runnable {
             if (DEBUG) {
                 Log.d(TAG, "Writing data len=" + len);
             }
-            mDriver.write(outBuff, READ_WAIT_MILLIS);
+            mPort.write(outBuff, READ_WAIT_MILLIS);
         }
     }
 
