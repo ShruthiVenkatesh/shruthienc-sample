@@ -164,13 +164,6 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
     private int mMaxPacketSize = 64; // TODO(mikey): detect
 
     /**
-     * Due to http://b.android.com/28023 , we cannot use UsbRequest async reads
-     * since it gives no indication of number of bytes read. Set this to
-     * {@code true} on platforms where it is fixed.
-     */
-    private static final boolean ENABLE_ASYNC_READS = false;
-
-    /**
      * Filter FTDI status bytes from buffer
      * @param src The source buffer (which contains status bytes)
      * @param dest The destination buffer to write the status bytes into (can be src)
@@ -248,51 +241,16 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
     }
 
     @Override
-    public int read(byte[] dest, int timeoutMillis) throws IOException {
+    public int read(final byte[] dest,
+            final int timeoutMillis) throws IOException {
         final UsbEndpoint endpoint = mDevice.getInterface(0).getEndpoint(0);
-
-        if (ENABLE_ASYNC_READS) {
-            final int readAmt;
-            synchronized (mReadBufferLock) {
-                // mReadBuffer is only used for maximum read size.
-                readAmt = Math.min(dest.length, mReadBuffer.length);
-            }
-
-            final UsbRequest request = new UsbRequest();
-            request.initialize(mConnection, endpoint);
-
-            final ByteBuffer buf = ByteBuffer.wrap(dest);
-            if (!request.queue(buf, readAmt)) {
-                throw new IOException("Error queueing request.");
-            }
-
-            final UsbRequest response = mConnection.requestWait();
-            if (response == null) {
-                throw new IOException("Null response");
-            }
-
-            final int payloadBytesRead = buf.position() - MODEM_STATUS_HEADER_LENGTH;
-            if (payloadBytesRead > 0) {
-                Log.d(TAG, HexDump.dumpHexString(dest, 0, Math.min(32, dest.length)));
-                return payloadBytesRead;
-            } else {
-                return 0;
-            }
-        } else {
-            final int totalBytesRead;
-
-            synchronized (mReadBufferLock) {
-                final int readAmt = Math.min(dest.length, mReadBuffer.length);
-                totalBytesRead = mConnection.bulkTransfer(endpoint, mReadBuffer,
-                        readAmt, timeoutMillis);
-
-                if (totalBytesRead < MODEM_STATUS_HEADER_LENGTH) {
-                    throw new IOException("Expected at least " + MODEM_STATUS_HEADER_LENGTH + " bytes");
-                }
-  
-                return filterStatusBytes(mReadBuffer, dest, totalBytesRead, endpoint.getMaxPacketSize());
-            }
-        }
+        final int count = mConnection.bulkTransfer(endpoint, dest, dest.length, timeoutMillis);
+        return (count < MODEM_STATUS_HEADER_LENGTH)
+                ? 0
+                : filterStatusBytes(dest,
+                        dest,
+                        count,
+                        endpoint.getMaxPacketSize());
     }
 
     @Override

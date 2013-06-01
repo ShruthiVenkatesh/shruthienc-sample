@@ -95,22 +95,10 @@ public class CdcAcmSerialDriver extends CommonUsbSerialDriver {
     }
 
     @Override
-    public int read(byte[] dest, int timeoutMillis) throws IOException {
-        final int numBytesRead;
-        synchronized (mReadBufferLock) {
-            int readAmt = Math.min(dest.length, mReadBuffer.length);
-            numBytesRead = mConnection.bulkTransfer(mReadEndpoint, mReadBuffer, readAmt,
-                    timeoutMillis);
-            if (numBytesRead < 0) {
-                // This sucks: we get -1 on timeout, not 0 as preferred.
-                // We *should* use UsbRequest, except it has a bug/api oversight
-                // where there is no way to determine the number of bytes read
-                // in response :\ -- http://b.android.com/28023
-                return 0;
-            }
-            System.arraycopy(mReadBuffer, 0, dest, 0, numBytesRead);
-        }
-        return numBytesRead;
+    public int read(final byte[] dest,
+            final int timeoutMillis) throws IOException {
+        final int count = mConnection.bulkTransfer(mReadEndpoint, dest, dest.length, timeoutMillis);
+        return (count < 0) ? 0 : count;
     }
 
     @Override
