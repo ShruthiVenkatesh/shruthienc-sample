@@ -41,6 +41,7 @@ public class SerialInputOutputManager implements Runnable {
     private static final boolean DEBUG = true;
 
     private static final int READ_WAIT_MILLIS = 200;
+    private static final int WRITE_STEP_TIMEOUT_MILLIS = 200;
     private static final int BUFSIZ = 4096;
 
     private final UsbSerialPort mPort;
@@ -49,6 +50,12 @@ public class SerialInputOutputManager implements Runnable {
 
     // Synchronized by 'mWriteBuffer'
     private final ByteBuffer mWriteBuffer = ByteBuffer.allocate(BUFSIZ);
+
+    private final Object mReadLock = new Object();
+    private final Object mWriteLock = new Object();
+
+    private boolean purgingWriteBuffers = false;
+    private boolean purgingReadBuffers = false;
 
     private enum State {
         STOPPED,
@@ -104,6 +111,38 @@ public class SerialInputOutputManager implements Runnable {
         }
     }
 
+    /**
+     * Trigger purging non-transmitted output data and / or non-read input
+     * from the read / write buffers. Also performs a purge operation of the device
+     * buffers, if the device / driver supports it.
+     * @param purgeReadBuffers {@code true} to purge non-transmitted output data.
+     * @param purgeWriteBuffers {@code true} to purge non-read input data.
+     * @throws IOException if an I/O error occurred.
+     */
+    public void purge(boolean purgeReadBuffers,
+            boolean purgeWriteBuffers) throws IOException {
+        try {
+            purgingReadBuffers = purgeReadBuffers;
+            purgingWriteBuffers = purgeWriteBuffers;
+
+            if (purgeReadBuffers) {
+                synchronized (mReadLock) {
+                    mPort.purgeHwBuffers(true, false);
+                }
+            }
+
+            synchronized (mWriteLock) {
+                synchronized (mWriteBuffer) {
+                    mPort.purgeHwBuffers(false, true);
+                    mWriteBuffer.clear();
+                }
+            }
+        } finally {
+            purgingReadBuffers = false;
+            purgingWriteBuffers = false;
+        }
+    }
+
     public synchronized void stop() {
         if (getState() == State.RUNNING) {
             Log.i(TAG, "Stop requested");
@@ -156,14 +195,19 @@ public class SerialInputOutputManager implements Runnable {
 
     private void step() throws IOException {
         // Handle incoming data.
-        int len = mPort.read(mReadBuffer.array(), READ_WAIT_MILLIS);
-        if (len > 0) {
+        int len;
+        synchronized (mReadLock) {
+            len = mPort.read(mReadBuffer.array(), READ_WAIT_MILLIS);
+        }
+        if ((len > 0) && (!purgingReadBuffers)) {
             if (DEBUG) Log.d(TAG, "Read data len=" + len);
             final Listener listener = getListener();
             if (listener != null) {
                 final byte[] data = new byte[len];
                 mReadBuffer.get(data, 0, len);
-                listener.onNewData(data);
+                if (!purgingReadBuffers) {
+                    listener.onNewData(data);
+                }
             }
             mReadBuffer.clear();
         }
@@ -183,7 +227,26 @@ public class SerialInputOutputManager implements Runnable {
             if (DEBUG) {
                 Log.d(TAG, "Writing data len=" + len);
             }
-            mPort.write(outBuff);
+
+            synchronized (mWriteLock) {
+                int writtenBytesCount = 0;
+                while ((writtenBytesCount < outBuff.length) && !purgingWriteBuffers) {
+                    int writeRet = mPort.write(outBuff,
+                            outBuff.length - writtenBytesCount,
+                            WRITE_STEP_TIMEOUT_MILLIS);
+                    if (writeRet == 0) {
+                        throw new IOException("Could not write data to device");
+                    } else if ((writeRet < outBuff.length - writtenBytesCount)
+                            && !purgingWriteBuffers) {
+                        System.arraycopy(outBuff,
+                                writeRet,
+                                outBuff,
+                                0,
+                                outBuff.length - writtenBytesCount);
+                    }
+                    writtenBytesCount += writeRet;
+                }
+            }
         }
     }
 
