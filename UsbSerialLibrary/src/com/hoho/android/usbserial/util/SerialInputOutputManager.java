@@ -85,8 +85,8 @@ public class SerialInputOutputManager implements Runnable {
     /**
      * Creates a new instance with no listener.
      */
-    public SerialInputOutputManager(UsbSerialDriver driver) {
-        this(driver, null);
+    public SerialInputOutputManager(UsbSerialPort port) {
+        this(port, null);
     }
 
     /**
