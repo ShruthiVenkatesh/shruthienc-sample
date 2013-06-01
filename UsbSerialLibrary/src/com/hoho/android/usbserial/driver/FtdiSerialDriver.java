@@ -519,8 +519,8 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
     }
 
     @Override
-    public boolean flushHwBuffers(boolean flushReadBuffers, boolean flushWriteBuffers) throws IOException {
-        if (flushReadBuffers) {
+    public boolean purgeHwBuffers(boolean purgeReadBuffers, boolean purgeWriteBuffers) throws IOException {
+        if (purgeReadBuffers) {
             int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE, SIO_RESET_REQUEST,
                     SIO_RESET_PURGE_RX, 0 /* index */, null, 0, USB_WRITE_TIMEOUT_MILLIS);
             if (result != 0) {
@@ -528,7 +528,7 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
             }
         }
 
-        if (flushWriteBuffers) {
+        if (purgeWriteBuffers) {
             int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE, SIO_RESET_REQUEST,
                     SIO_RESET_PURGE_TX, 0 /* index */, null, 0, USB_WRITE_TIMEOUT_MILLIS);
             if (result != 0) {

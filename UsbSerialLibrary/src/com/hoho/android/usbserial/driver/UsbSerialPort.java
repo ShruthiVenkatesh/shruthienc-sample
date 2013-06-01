@@ -181,14 +181,14 @@ public interface UsbSerialPort {
     public void setRTS(boolean value) throws IOException;
     
     /**
-     * Trigger flushing non-transmitted output data and / or non-read input
+     * Trigger purging non-transmitted output data and / or non-read input
      * from the device hardware buffers.
-     * @param flushReadBuffers {@code true} to flush non-transmitted output data.
-     * @param flushWriteBuffers {@code true} to flush non-read input data.
+     * @param purgeReadBuffers {@code true} to purge non-transmitted output data.
+     * @param purgeWriteBuffers {@code true} to purge non-read input data.
      * @return {@code true} if the operation was successful, or
      * {@code false} if the operation is not supported by the driver or device.
-     * @throws IOException if an error occurred during flush.
+     * @throws IOException if an I/O error occurred.
      */
-    public boolean flushHwBuffers(boolean flushReadBuffers, boolean flushWriteBuffers) throws IOException;
+    public boolean purgeHwBuffers(boolean purgeReadBuffers, boolean purgeWriteBuffers) throws IOException;
 
 }

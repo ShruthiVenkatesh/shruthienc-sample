@@ -267,10 +267,10 @@ public class Cp2102SerialDriver extends CommonUsbSerialDriver {
     }
 
     @Override
-    public boolean flushHwBuffers(boolean flushReadBuffers,
-            boolean flushWriteBuffers) throws IOException {
-        int value = (flushReadBuffers ? FLUSH_READ_CODE : 0)
-                | (flushWriteBuffers ? FLUSH_WRITE_CODE : 0);
+    public boolean purgeHwBuffers(boolean purgeReadBuffers,
+            boolean purgeWriteBuffers) throws IOException {
+        int value = (purgeReadBuffers ? FLUSH_READ_CODE : 0)
+                | (purgeWriteBuffers ? FLUSH_WRITE_CODE : 0);
 
         if (value != 0) {
             setConfigSingle(SILABSER_FLUSH_REQUEST_CODE, value);
