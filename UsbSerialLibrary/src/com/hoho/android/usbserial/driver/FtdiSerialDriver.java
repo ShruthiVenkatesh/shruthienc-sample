@@ -25,13 +25,9 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbManager;
-import android.hardware.usb.UsbRequest;
 import android.util.Log;
 
-import com.hoho.android.usbserial.util.HexDump;
-
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.security.AccessControlException;
 import java.util.LinkedHashMap;
 import java.util.Map;

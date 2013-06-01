@@ -1,7 +1,6 @@
 package com.hoho.android.usbserial.driver;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.security.AccessControlException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -11,7 +10,6 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
-import android.hardware.usb.UsbRequest;
 import android.util.Log;
 
 public class Cp2102SerialDriver extends CommonUsbSerialDriver {
