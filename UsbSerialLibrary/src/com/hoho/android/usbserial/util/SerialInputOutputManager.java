@@ -183,7 +183,7 @@ public class SerialInputOutputManager implements Runnable {
             if (DEBUG) {
                 Log.d(TAG, "Writing data len=" + len);
             }
-            mPort.write(outBuff, READ_WAIT_MILLIS);
+            mPort.write(outBuff);
         }
     }
 

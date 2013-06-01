@@ -296,39 +296,10 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
     }
 
     @Override
-    public int write(byte[] src, int timeoutMillis) throws IOException {
+    public int write(byte[] src, final int length, int timeoutMillis) throws IOException {
         final UsbEndpoint endpoint = mDevice.getInterface(0).getEndpoint(1);
-        int offset = 0;
-
-        while (offset < src.length) {
-            final int writeLength;
-            final int amtWritten;
-
-            synchronized (mWriteBufferLock) {
-                final byte[] writeBuffer;
-
-                writeLength = Math.min(src.length - offset, mWriteBuffer.length);
-                if (offset == 0) {
-                    writeBuffer = src;
-                } else {
-                    // bulkTransfer does not support offsets, make a copy.
-                    System.arraycopy(src, offset, mWriteBuffer, 0, writeLength);
-                    writeBuffer = mWriteBuffer;
-                }
-
-                amtWritten = mConnection.bulkTransfer(endpoint, writeBuffer, writeLength,
-                        timeoutMillis);
-            }
-
-            if (amtWritten <= 0) {
-                throw new IOException("Error writing " + writeLength
-                        + " bytes at offset " + offset + " length=" + src.length);
-            }
-
-            Log.d(TAG, "Wrote amtWritten=" + amtWritten + " attempted=" + writeLength);
-            offset += amtWritten;
-        }
-        return offset;
+        final int count = mConnection.bulkTransfer(endpoint, src, length, timeoutMillis);
+        return (count < 0) ? 0 : count;
     }
 
     private int setBaudRate(int baudRate) throws IOException {

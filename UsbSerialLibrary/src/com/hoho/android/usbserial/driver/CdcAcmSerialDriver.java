@@ -114,38 +114,9 @@ public class CdcAcmSerialDriver extends CommonUsbSerialDriver {
     }
 
     @Override
-    public int write(byte[] src, int timeoutMillis) throws IOException {
-        // TODO(mikey): Nearly identical to FtdiSerial write. Refactor.
-        int offset = 0;
-
-        while (offset < src.length) {
-            final int writeLength;
-            final int amtWritten;
-
-            synchronized (mWriteBufferLock) {
-                final byte[] writeBuffer;
-
-                writeLength = Math.min(src.length - offset, mWriteBuffer.length);
-                if (offset == 0) {
-                    writeBuffer = src;
-                } else {
-                    // bulkTransfer does not support offsets, make a copy.
-                    System.arraycopy(src, offset, mWriteBuffer, 0, writeLength);
-                    writeBuffer = mWriteBuffer;
-                }
-
-                amtWritten = mConnection.bulkTransfer(mWriteEndpoint, writeBuffer, writeLength,
-                        timeoutMillis);
-            }
-            if (amtWritten <= 0) {
-                throw new IOException("Error writing " + writeLength
-                        + " bytes at offset " + offset + " length=" + src.length);
-            }
-
-            Log.d(TAG, "Wrote amt=" + amtWritten + " attempted=" + writeLength);
-            offset += amtWritten;
-        }
-        return offset;
+    public int write(byte[] src, final int length, int timeoutMillis) throws IOException {
+        final int count = mConnection.bulkTransfer(mWriteEndpoint, src, length, timeoutMillis);
+        return (count < 0) ? 0 : count;
     }
 
     @Override

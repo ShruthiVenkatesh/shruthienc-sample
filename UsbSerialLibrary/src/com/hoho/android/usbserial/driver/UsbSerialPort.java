@@ -89,14 +89,25 @@ public interface UsbSerialPort {
     public int read(final byte[] dest, final int timeoutMillis) throws IOException;
 
     /**
+     * Writes all bytes from the source buffer.
+     *
+     * @param src the source byte buffer
+     * @throws IOException if an error occurred during writing
+     */
+    public void write(final byte[] src) throws IOException;
+
+    /**
      * Writes as many bytes as possible from the source buffer.
      *
      * @param src the source byte buffer
+     * @param length the number of bytes to write
      * @param timeoutMillis the timeout for writing
      * @return the actual number of bytes written
      * @throws IOException if an error occurred during writing
      */
-    public int write(final byte[] src, final int timeoutMillis) throws IOException;
+    public int write(final byte[] src,
+            final int length,
+            final int timeoutMillis) throws IOException;
 
     /**
      * Sets various serial port parameters.
