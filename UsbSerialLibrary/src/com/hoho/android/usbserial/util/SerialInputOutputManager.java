@@ -113,6 +113,12 @@ public class SerialInputOutputManager implements Runnable {
         }
     }
 
+    public void writeSync(byte[] data) throws IOException {
+        synchronized (mWriteLock) {
+            mPort.write(data);
+        }
+    }
+
     /**
      * Trigger purging non-transmitted output data and / or non-read input
      * from the read / write buffers. Also performs a purge operation of the device
