@@ -119,7 +119,7 @@ public class SerialInputOutputManager implements Runnable {
      * @param purgeWriteBuffers {@code true} to purge non-read input data.
      * @throws IOException if an I/O error occurred.
      */
-    public void purge(boolean purgeReadBuffers,
+    public synchronized void purge(boolean purgeReadBuffers,
             boolean purgeWriteBuffers) throws IOException {
         try {
             purgingReadBuffers = purgeReadBuffers;
