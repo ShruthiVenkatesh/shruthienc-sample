@@ -57,6 +57,8 @@ public class SerialInputOutputManager implements Runnable {
     private boolean purgingWriteBuffers = false;
     private boolean purgingReadBuffers = false;
 
+    private boolean writing = false;
+
     private enum State {
         STOPPED,
         RUNNING,
@@ -143,6 +145,20 @@ public class SerialInputOutputManager implements Runnable {
         }
     }
 
+    /**
+     * Wait until all pending write operations are completed.
+     */
+    public void drain() {
+        boolean writeBufferEmpty = false;
+        while (!writeBufferEmpty || writing) {
+            synchronized (mWriteLock) {
+                synchronized (mWriteBuffer) {
+                    writeBufferEmpty = (mWriteBuffer.position() <= 0);
+                }
+            }
+        }
+    }
+
     public synchronized void stop() {
         if (getState() == State.RUNNING) {
             Log.i(TAG, "Stop requested");
@@ -213,40 +229,45 @@ public class SerialInputOutputManager implements Runnable {
         }
 
         // Handle outgoing data.
-        byte[] outBuff = null;
-        synchronized (mWriteBuffer) {
-            if (mWriteBuffer.position() > 0) {
-                len = mWriteBuffer.position();
-                outBuff = new byte[len];
-                mWriteBuffer.rewind();
-                mWriteBuffer.get(outBuff, 0, len);
-                mWriteBuffer.clear();
-            }
-        }
-        if (outBuff != null) {
-            if (DEBUG) {
-                Log.d(TAG, "Writing data len=" + len);
-            }
-
-            synchronized (mWriteLock) {
-                int writtenBytesCount = 0;
-                while ((writtenBytesCount < outBuff.length) && !purgingWriteBuffers) {
-                    int writeRet = mPort.write(outBuff,
-                            outBuff.length - writtenBytesCount,
-                            WRITE_STEP_TIMEOUT_MILLIS);
-                    if (writeRet == 0) {
-                        throw new IOException("Could not write data to device");
-                    } else if ((writeRet < outBuff.length - writtenBytesCount)
-                            && !purgingWriteBuffers) {
-                        System.arraycopy(outBuff,
-                                writeRet,
-                                outBuff,
-                                0,
-                                outBuff.length - writtenBytesCount);
-                    }
-                    writtenBytesCount += writeRet;
+        try {
+            byte[] outBuff = null;
+            synchronized (mWriteBuffer) {
+                if (mWriteBuffer.position() > 0) {
+                    len = mWriteBuffer.position();
+                    outBuff = new byte[len];
+                    mWriteBuffer.rewind();
+                    mWriteBuffer.get(outBuff, 0, len);
+                    mWriteBuffer.clear();
+                    writing = true;
                 }
             }
+            if (outBuff != null) {
+                if (DEBUG) {
+                    Log.d(TAG, "Writing data len=" + len);
+                }
+    
+                synchronized (mWriteLock) {
+                    int writtenBytesCount = 0;
+                    while ((writtenBytesCount < outBuff.length) && !purgingWriteBuffers) {
+                        int writeRet = mPort.write(outBuff,
+                                outBuff.length - writtenBytesCount,
+                                WRITE_STEP_TIMEOUT_MILLIS);
+                        if (writeRet == 0) {
+                            throw new IOException("Could not write data to device");
+                        } else if ((writeRet < outBuff.length - writtenBytesCount)
+                                && !purgingWriteBuffers) {
+                            System.arraycopy(outBuff,
+                                    writeRet,
+                                    outBuff,
+                                    0,
+                                    outBuff.length - writtenBytesCount);
+                        }
+                        writtenBytesCount += writeRet;
+                    }
+                }
+            }
+        } finally {
+            writing = false;
         }
     }
 
