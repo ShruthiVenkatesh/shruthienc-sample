@@ -72,6 +72,7 @@ abstract class CommonUsbSerialDriver implements UsbSerialDriver {
         return 1;
     }
 
+    @Override
     public UsbSerialPort getPort(int i) {
         if (i == 0) {
             return this;
