@@ -44,12 +44,8 @@ abstract class CommonUsbSerialDriver implements UsbSerialDriver {
         mDevice = device;
     }
 
-    /**
-     * Returns the currently-bound USB device.
-     *
-     * @return the device
-     */
-    public final UsbDevice getDevice() {
+    @Override
+    public UsbDevice getDevice() {
         return mDevice;
     }
 

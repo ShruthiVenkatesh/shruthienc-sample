@@ -23,6 +23,7 @@ package com.hoho.android.usbserial.driver;
 import java.io.IOException;
 import java.security.AccessControlException;
 
+import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 
 /**
@@ -64,5 +65,12 @@ public interface UsbSerialDriver extends UsbSerialPort {
      * @throws IndexOutOfBoundsException No port with index i exists.
      */
     public UsbSerialPort getPort(int i) throws IndexOutOfBoundsException;
+
+    /**
+     * Returns the currently-bound USB device.
+     *
+     * @return the device
+     */
+    public UsbDevice getDevice();
 
 }
