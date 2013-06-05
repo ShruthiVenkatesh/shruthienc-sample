@@ -91,7 +91,7 @@ public class CdcAcmSerialDriver extends CommonSinglePortUsbSerialDriver {
 
     @Override
     public void close() throws IOException {
-        mConnection.close();
+        super.close();
     }
 
     @Override

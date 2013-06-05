@@ -27,10 +27,10 @@ public abstract class CommonMultiPortUsbSerialDriver extends CommonUsbSerialDriv
         ++mOpenPortsCount;
     }
 
-    protected void close() {
+    protected void close() throws IOException {
         --mOpenPortsCount;
         if (mOpenPortsCount == 0) {
-            mConnection.close();
+            super.close();
         }
     }
 

@@ -22,6 +22,11 @@ public abstract class CommonSinglePortUsbSerialDriver extends CommonUsbSerialPor
     }
 
     @Override
+    public void close() throws IOException {
+        mConnection.close();
+    }
+
+    @Override
     public UsbDevice getDevice() {
         return mDevice;
     }

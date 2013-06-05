@@ -47,6 +47,10 @@ abstract class CommonUsbSerialDriver implements UsbSerialDriver {
         mConnection = open(usbManager, mDevice);
     }
 
+    protected void close() throws IOException {
+        mConnection.close();
+    }
+
     static UsbDeviceConnection open(UsbManager usbManager, UsbDevice device) throws IOException, AccessControlException {
         if (!usbManager.hasPermission(device)) {
             throw new AccessControlException("No permission to access USB device " + device);
