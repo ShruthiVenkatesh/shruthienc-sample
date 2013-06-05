@@ -12,11 +12,9 @@ import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
 
-public class Cp21xxSerialDriver extends CommonUsbSerialDriver {
+public class Cp21xxSerialDriver extends CommonMultiPortUsbSerialDriver {
 
     private static final String TAG = Cp21xxSerialDriver.class.getSimpleName();
-
-    private final Cp21xxPort mPort;
 
     public class Cp21xxPort extends CommonUsbSerialPort {
 
@@ -63,12 +61,18 @@ public class Cp21xxSerialDriver extends CommonUsbSerialDriver {
         private static final int CONTROL_WRITE_DTR = 0x0100;
         private static final int CONTROL_WRITE_RTS = 0x0200;
 
+        private final int mPortIdx;
+
         private UsbEndpoint mReadEndpoint;
         private UsbEndpoint mWriteEndpoint;
 
+        public Cp21xxPort(int portIdx) {
+            mPortIdx = portIdx;
+        }
+
         private int setConfigSingle(int request, int value) {
             return mConnection.controlTransfer(REQTYPE_HOST_TO_DEVICE, request, value, 
-                    0, null, 0, USB_WRITE_TIMEOUT_MILLIS);
+                    mPortIdx, null, 0, USB_WRITE_TIMEOUT_MILLIS);
         }
 
         @Override
@@ -77,16 +81,15 @@ public class Cp21xxSerialDriver extends CommonUsbSerialDriver {
 
             boolean opened = false;
             try {
-                for (int i = 0; i < mDevice.getInterfaceCount(); i++) {                
-                    UsbInterface usbIface = mDevice.getInterface(i);
-                    if (mConnection.claimInterface(usbIface, true)) {
-                        Log.d(TAG, "claimInterface " + i + " SUCCESS");                    
-                    } else {
-                        Log.d(TAG, "claimInterface " + i + " FAIL");
-                    }
-                }                       
+                
+                UsbInterface usbIface = mDevice.getInterface(mPortIdx);
+                if (mConnection.claimInterface(usbIface, true)) {
+                    Log.d(TAG, "claimInterface " + mPortIdx + " SUCCESS");
+                } else {
+                    Log.d(TAG, "claimInterface " + mPortIdx + " FAIL");
+                }
 
-                UsbInterface dataIface = mDevice.getInterface(mDevice.getInterfaceCount() - 1);
+                UsbInterface dataIface = mDevice.getInterface(mPortIdx);
                 for (int i = 0; i < dataIface.getEndpointCount(); i++) {
                     UsbEndpoint ep = dataIface.getEndpoint(i);
                     if (ep.getType() == UsbConstants.USB_ENDPOINT_XFER_BULK) {
@@ -100,7 +103,7 @@ public class Cp21xxSerialDriver extends CommonUsbSerialDriver {
 
                 setConfigSingle(SILABSER_IFC_ENABLE_REQUEST_CODE, UART_ENABLE);
                 setConfigSingle(SILABSER_SET_MHS_REQUEST_CODE, MCR_ALL | CONTROL_WRITE_DTR | CONTROL_WRITE_RTS);
-                setConfigSingle(SILABSER_SET_BAUDDIV_REQUEST_CODE, BAUD_RATE_GEN_FREQ / DEFAULT_BAUD_RATE);            
+                setConfigSingle(SILABSER_SET_BAUDDIV_REQUEST_CODE, BAUD_RATE_GEN_FREQ / DEFAULT_BAUD_RATE);
                 //            setParameters(DEFAULT_BAUD_RATE, DEFAULT_DATA_BITS, DEFAULT_STOP_BITS, DEFAULT_PARITY);
                 opened = true;
             } finally {
@@ -113,7 +116,7 @@ public class Cp21xxSerialDriver extends CommonUsbSerialDriver {
         @Override
         public void close() throws IOException {
             setConfigSingle(SILABSER_IFC_ENABLE_REQUEST_CODE, UART_DISABLE);
-            mConnection.close();
+            Cp21xxSerialDriver.this.close();
         }
 
         @Override
@@ -136,8 +139,8 @@ public class Cp21xxSerialDriver extends CommonUsbSerialDriver {
                     (byte) ((baudRate >> 16) & 0xff),
                     (byte) ((baudRate >> 24) & 0xff)
             };
-            int ret = mConnection.controlTransfer(REQTYPE_HOST_TO_DEVICE, SILABSER_SET_BAUDRATE, 
-                    0, 0, data, 4, USB_WRITE_TIMEOUT_MILLIS);
+            int ret = mConnection.controlTransfer(REQTYPE_HOST_TO_DEVICE, SILABSER_SET_BAUDRATE,
+                    0, mPortIdx, data, 4, USB_WRITE_TIMEOUT_MILLIS);
             if (ret < 0) {
                 throw new IOException("Error setting baud rate.");
             }
@@ -188,7 +191,7 @@ public class Cp21xxSerialDriver extends CommonUsbSerialDriver {
                 configStopBits |= 2;
                 break;
             }
-            setConfigSingle(SILABSER_SET_LINE_CTL_REQUEST_CODE, configStopBits);        
+            setConfigSingle(SILABSER_SET_LINE_CTL_REQUEST_CODE, configStopBits);
         }
 
         @Override
@@ -244,21 +247,24 @@ public class Cp21xxSerialDriver extends CommonUsbSerialDriver {
     }
 
     public Cp21xxSerialDriver(UsbDevice device) {
-        super(device);
-        mPort = new Cp21xxPort();
+        super(device, getExpectedPortsCount(device));
     }
 
     @Override
-    public int getPortCount() {
-        return 1;
+    protected UsbSerialPort createPortInstance(int portIdx) {
+        return new Cp21xxPort(portIdx);
     }
 
-    @Override
-    public UsbSerialPort getPort(int i) throws IndexOutOfBoundsException {
-        if (i == 0) {
-            return mPort;
-        } else {
-            throw new IndexOutOfBoundsException();
+    private static final int getExpectedPortsCount(UsbDevice device) {
+        switch (device.getProductId()) {
+        case UsbId.SILABS_CP2105:
+            return 2;
+
+        case UsbId.SILABS_CP2108:
+            return 4;
+
+        default:
+            return 1;
         }
     }
 
