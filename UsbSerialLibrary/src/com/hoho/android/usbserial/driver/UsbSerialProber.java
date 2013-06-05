@@ -77,8 +77,8 @@ public enum UsbSerialProber {
     SILAB_SERIAL {
         @Override
         public UsbSerialDriver getDevice(final UsbDevice usbDevice) {
-            if (testIfSupported(usbDevice, Cp2102SerialDriver.getSupportedDevices())) {
-                return new Cp2102SerialDriver(usbDevice);
+            if (testIfSupported(usbDevice, Cp21xxSerialDriver.getSupportedDevices())) {
+                return new Cp21xxSerialDriver(usbDevice);
             } else {
                 return null;
             }

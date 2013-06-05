@@ -12,13 +12,13 @@ import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
 
-public class Cp2102SerialDriver extends CommonUsbSerialDriver {
+public class Cp21xxSerialDriver extends CommonUsbSerialDriver {
 
-    private static final String TAG = Cp2102SerialDriver.class.getSimpleName();
+    private static final String TAG = Cp21xxSerialDriver.class.getSimpleName();
 
-    private final Cp2102SerialPort mPort;
+    private final Cp21xxPort mPort;
 
-    public class Cp2102SerialPort extends CommonUsbSerialPort {
+    public class Cp21xxPort extends CommonUsbSerialPort {
 
         private static final int DEFAULT_BAUD_RATE = 9600;
 
@@ -73,7 +73,7 @@ public class Cp2102SerialDriver extends CommonUsbSerialDriver {
 
         @Override
         public void open(UsbManager usbManager) throws IOException, AccessControlException {
-            Cp2102SerialDriver.this.open(usbManager);
+            Cp21xxSerialDriver.this.open(usbManager);
 
             boolean opened = false;
             try {
@@ -243,9 +243,9 @@ public class Cp2102SerialDriver extends CommonUsbSerialDriver {
         }
     }
 
-    public Cp2102SerialDriver(UsbDevice device) {
+    public Cp21xxSerialDriver(UsbDevice device) {
         super(device);
-        mPort = new Cp2102SerialPort();
+        mPort = new Cp21xxPort();
     }
 
     @Override
@@ -264,9 +264,12 @@ public class Cp2102SerialDriver extends CommonUsbSerialDriver {
 
     public static Map<Integer, int[]> getSupportedDevices() {
         final Map<Integer, int[]> supportedDevices = new LinkedHashMap<Integer, int[]>();
-        supportedDevices.put(Integer.valueOf(UsbId.VENDOR_SILAB),
+        supportedDevices.put(Integer.valueOf(UsbId.VENDOR_SILABS),
                 new int[] {
-            UsbId.SILAB_CP2102
+            UsbId.SILABS_CP2102,
+            UsbId.SILABS_CP2105,
+            UsbId.SILABS_CP2108,
+            UsbId.SILABS_CP2110
         });
         return supportedDevices;
     }
