@@ -20,7 +20,7 @@ import java.util.Map;
  *      href="http://www.usb.org/developers/devclass_docs/usbcdc11.pdf">Universal
  *      Serial Bus Class Definitions for Communication Devices, v1.1</a>
  */
-public class CdcAcmSerialDriver extends CommonUsbSerialDriver {
+public class CdcAcmSerialDriver extends CommonSinglePortUsbSerialDriver {
 
     private final String TAG = CdcAcmSerialDriver.class.getSimpleName();
 

@@ -20,35 +20,14 @@
 
 package com.hoho.android.usbserial.driver;
 
-import java.io.IOException;
-import java.security.AccessControlException;
-
 import android.hardware.usb.UsbDevice;
-import android.hardware.usb.UsbManager;
 
 /**
  * Driver interface for a USB serial device.
  *
  * @author mike wakerly (opensource@hoho.com)
  */
-public interface UsbSerialDriver extends UsbSerialPort {
-
-    /**
-     * Opens and initializes the device as a USB serial device. Upon success,
-     * caller must ensure that {@link #close()} is eventually called.
-     *
-     * @param usbManager the {@link UsbManager} to use.
-     * @throws IOException on error opening or initializing the device.
-     * @throws AccessControlException the permission to access the USB device is not granted.
-     */
-    public void open(UsbManager usbManager) throws IOException, AccessControlException;
-
-    /**
-     * Closes the serial device.
-     *
-     * @throws IOException on error closing the device.
-     */
-    public void close() throws IOException;
+public interface UsbSerialDriver {
 
     /**
      * Get the count of available ports for this USB device.
