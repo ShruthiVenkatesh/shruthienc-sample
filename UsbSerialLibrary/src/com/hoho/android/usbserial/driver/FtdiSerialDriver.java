@@ -79,17 +79,15 @@ import java.util.Map;
  * </ul>
  * </p>
  *
- * @author mike wakerly (opensource@hoho.com)
+ * @author mike wakerly (opensource@hoho.com), Felix Hädicke (felixhaedicke@web.de)
  * @see <a href="http://code.google.com/p/usb-serial-for-android/">USB Serial
  * for Android project page</a>
  * @see <a href="http://www.ftdichip.com/">FTDI Homepage</a>
  * @see <a href="http://www.intra2net.com/en/developer/libftdi">libftdi</a>
  */
-public class FtdiSerialDriver extends CommonUsbSerialDriver {
+public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
 
     private static final String TAG = FtdiSerialDriver.class.getSimpleName();
-
-    private final FtdiSerialPort mPort;
 
     /**
      * FTDI chip types.
@@ -97,6 +95,8 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
     private static enum DeviceType {
         TYPE_BM, TYPE_AM, TYPE_2232C, TYPE_R, TYPE_2232H, TYPE_4232H;
     }
+
+    private DeviceType mType;
 
     public class FtdiSerialPort extends CommonUsbSerialPort {
 
@@ -157,7 +157,7 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
          */
         private static final int MODEM_STATUS_HEADER_LENGTH = 2;
 
-        private DeviceType mType;
+        private final int mPortIdx;
 
         private UsbEndpoint mReadEndpoint;
         private UsbEndpoint mWriteEndpoint;
@@ -171,8 +171,8 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
          * @throws UsbSerialRuntimeException if the given device is incompatible
          *             with this driver
          */
-        public FtdiSerialPort() {
-            mType = null;
+        public FtdiSerialPort(int portIdx) {
+            mPortIdx = portIdx;
         }
 
         /**
@@ -203,13 +203,10 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
 
         public void reset() throws IOException {
             int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE, SIO_RESET_REQUEST,
-                    SIO_RESET_SIO, 0 /* index */, null, 0, USB_WRITE_TIMEOUT_MILLIS);
+                    SIO_RESET_SIO, mPortIdx, null, 0, USB_WRITE_TIMEOUT_MILLIS);
             if (result != 0) {
                 throw new IOException("Reset failed: result=" + result);
             }
-
-            // TODO(mikey): autodetect.
-            mType = DeviceType.TYPE_R;
         }
 
         @Override
@@ -218,16 +215,11 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
 
             boolean opened = false;
             try {
-                for (int i = 0; i < mDevice.getInterfaceCount(); i++) {
-                    if (mConnection.claimInterface(mDevice.getInterface(i), true)) {
-                        Log.d(TAG, "claimInterface " + i + " SUCCESS");
-                    } else {
-                        throw new IOException("Error claiming interface " + i);
-                    }
+                UsbInterface usbInterface = mDevice.getInterface(mPortIdx);
+                if (!mConnection.claimInterface(usbInterface, true)) {
+                    throw new IOException("Could not claim USB interface " + mPortIdx);
                 }
                 reset();
-
-                UsbInterface usbInterface = mDevice.getInterface(0);
                 mReadEndpoint = usbInterface.getEndpoint(0);
                 mWriteEndpoint = usbInterface.getEndpoint(1);
                 mReadEndpointMaxPacketSize = mReadEndpoint.getMaxPacketSize();
@@ -241,8 +233,8 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
         }
 
         @Override
-        public void close() {
-            mConnection.close();
+        public void close() throws IOException {
+            FtdiSerialDriver.this.close();
         }
 
         @Override
@@ -269,7 +261,7 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
             long index = vals[1];
             long value = vals[2];
             int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE,
-                    SIO_SET_BAUD_RATE_REQUEST, (int) value, (int) index,
+                    SIO_SET_BAUD_RATE_REQUEST, (int) value, ((int) index) | mPortIdx,
                     null, 0, USB_WRITE_TIMEOUT_MILLIS);
             if (result != 0) {
                 throw new IOException("Setting baudrate failed: result=" + result);
@@ -319,7 +311,7 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
             }
 
             int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE,
-                    SIO_SET_DATA_REQUEST, config, 0 /* index */,
+                    SIO_SET_DATA_REQUEST, config, mPortIdx,
                     null, 0, USB_WRITE_TIMEOUT_MILLIS);
             if (result != 0) {
                 throw new IOException("Setting parameters failed: result=" + result);
@@ -454,7 +446,7 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
         public boolean purgeHwBuffers(boolean purgeReadBuffers, boolean purgeWriteBuffers) throws IOException {
             if (purgeReadBuffers) {
                 int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE, SIO_RESET_REQUEST,
-                        SIO_RESET_PURGE_RX, 0 /* index */, null, 0, USB_WRITE_TIMEOUT_MILLIS);
+                        SIO_RESET_PURGE_RX, mPortIdx, null, 0, USB_WRITE_TIMEOUT_MILLIS);
                 if (result != 0) {
                     throw new IOException("Flushing RX failed: result=" + result);
                 }
@@ -462,7 +454,7 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
 
             if (purgeWriteBuffers) {
                 int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE, SIO_RESET_REQUEST,
-                        SIO_RESET_PURGE_TX, 0 /* index */, null, 0, USB_WRITE_TIMEOUT_MILLIS);
+                        SIO_RESET_PURGE_TX, mPortIdx, null, 0, USB_WRITE_TIMEOUT_MILLIS);
                 if (result != 0) {
                     throw new IOException("Flushing RX failed: result=" + result);
                 }
@@ -474,8 +466,37 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
     }
 
     public FtdiSerialDriver(UsbDevice device) {
-        super(device);
-        mPort = new FtdiSerialPort();
+        super(device, getExpectedPortsCount(device));
+
+        switch (device.getProductId()) {
+        case UsbId.FTDI_FT2232H:
+            mType = DeviceType.TYPE_2232H;
+
+        case UsbId.FTDI_FT4232H:
+            mType = DeviceType.TYPE_4232H;
+
+        default:
+            // TODO: other types?
+            mType = DeviceType.TYPE_R;
+        }
+    }
+
+    private static final int getExpectedPortsCount(UsbDevice device) {
+        switch (device.getProductId()) {
+        case UsbId.FTDI_FT2232H:
+            return 2;
+
+        case UsbId.FTDI_FT4232H:
+            return 4;
+
+        default:
+            return 1;
+        }
+    }
+
+    @Override
+    protected UsbSerialPort createPortInstance(int portIdx) {
+        return new FtdiSerialPort(portIdx);
     }
 
     public static Map<Integer, int[]> getSupportedDevices() {
@@ -483,22 +504,10 @@ public class FtdiSerialDriver extends CommonUsbSerialDriver {
         supportedDevices.put(Integer.valueOf(UsbId.VENDOR_FTDI),
                 new int[] {
             UsbId.FTDI_FT232R,
+            UsbId.FTDI_FT2232H,
+            UsbId.FTDI_FT4232H
         });
         return supportedDevices;
-    }
-
-    @Override
-    public int getPortCount() {
-        return 1;
-    }
-
-    @Override
-    public UsbSerialPort getPort(int i) throws IndexOutOfBoundsException {
-        if (i == 0) {
-            return mPort;
-        } else {
-            throw new IndexOutOfBoundsException();
-        }
     }
 
 }
