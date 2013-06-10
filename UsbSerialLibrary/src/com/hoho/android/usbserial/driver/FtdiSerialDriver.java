@@ -25,7 +25,6 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
-import android.util.Log;
 
 import java.io.IOException;
 import java.security.AccessControlException;
@@ -210,8 +209,8 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
         }
 
         @Override
-        public void open(UsbManager usbManager) throws IOException, AccessControlException {
-            FtdiSerialDriver.this.open(usbManager);
+        protected void initPortSepcific(UsbManager usbManager) throws IOException, AccessControlException {
+            FtdiSerialDriver.this.ensureIsOpen(usbManager);
 
             boolean opened = false;
             try {
@@ -227,14 +226,20 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
                 opened = true;
             } finally {
                 if (!opened) {
-                    close();
+                    try {
+                        FtdiSerialDriver.this.closeIfNoPortsOpen();
+                    } catch (Exception e) {
+                    }
                 }
             }
         }
 
         @Override
-        public void close() throws IOException {
-            FtdiSerialDriver.this.close();
+        protected void deinitPortSpecific() throws IOException {
+        }
+
+        protected void portClosed() throws IOException {
+            FtdiSerialDriver.this.closeIfNoPortsOpen();
         }
 
         @Override

@@ -53,9 +53,12 @@ public class CdcAcmSerialDriver extends CommonSinglePortUsbSerialDriver {
     }
 
     @Override
-    public void open(UsbManager usbManager) throws IOException, AccessControlException {
-        super.open(usbManager);
+    protected void initDriverSpecific(UsbManager usbManager) throws IOException, AccessControlException {
         initEndpoints();
+    }
+
+    @Override
+    protected void deinitDriverSpecific() throws IOException {
     }
 
     protected int sendAcmControlMessage(int request, int value, byte[] buf) {
@@ -87,11 +90,6 @@ public class CdcAcmSerialDriver extends CommonSinglePortUsbSerialDriver {
         Log.d(TAG, "Read endpoint direction: " + mReadEndpoint.getDirection());
         mWriteEndpoint = dataInterface.getEndpoint(0);
         Log.d(TAG, "Write endpoint direction: " + mWriteEndpoint.getDirection());
-    }
-
-    @Override
-    public void close() throws IOException {
-        super.close();
     }
 
     @Override

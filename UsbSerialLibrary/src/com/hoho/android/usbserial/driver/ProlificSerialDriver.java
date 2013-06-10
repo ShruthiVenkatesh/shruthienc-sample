@@ -259,8 +259,8 @@ public class ProlificSerialDriver extends CdcAcmSerialDriver {
     }
 
     @Override
-    public void open(UsbManager usbManager) throws IOException, AccessControlException {
-        super.open(usbManager);
+    protected void initDriverSpecific(UsbManager usbManager) throws IOException, AccessControlException {
+        super.initDriverSpecific(usbManager);
 
         detectSubtype();
         resetDevice();
@@ -268,23 +268,19 @@ public class ProlificSerialDriver extends CdcAcmSerialDriver {
     }
 
     @Override
-    public void close() throws IOException {
-        try {
-            mStopReadStatusThread = true;
-            synchronized (mReadStatusThreadLock) {
-                if (mReadStatusThread != null) {
-                    try {
-                        mReadStatusThread.join();
-                    } catch (Exception e) {
-                        Log.w(TAG, "An error occured while waiting for status read thread", e);
-                    }
+    protected void deinitDriverSpecific() throws IOException {
+        mStopReadStatusThread = true;
+        synchronized (mReadStatusThreadLock) {
+            if (mReadStatusThread != null) {
+                try {
+                    mReadStatusThread.join();
+                } catch (Exception e) {
+                    Log.w(TAG, "An error occured while waiting for status read thread", e);
                 }
             }
-    
-            resetDevice();
-        } finally {
-            super.close();
         }
+
+        resetDevice();
     }
 
     @Override

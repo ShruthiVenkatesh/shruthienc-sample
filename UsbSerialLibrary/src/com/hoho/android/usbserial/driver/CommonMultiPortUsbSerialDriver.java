@@ -10,27 +10,36 @@ public abstract class CommonMultiPortUsbSerialDriver extends CommonUsbSerialDriv
 
     private final UsbSerialPort mPorts[];
 
-    private int mOpenPortsCount = 0;
-
     public CommonMultiPortUsbSerialDriver(UsbDevice device,
             int portCount) {
         super(device);
         mPorts = new UsbSerialPort[portCount];
     }
 
-    @Override
-    protected void open(UsbManager usbManager) throws IOException,
-            AccessControlException {
-        if (mOpenPortsCount == 0) {
-            super.open(usbManager);
+    // Calls open if the driver is not yet opened.
+    // Is usually called by the port implementation as the
+    // first action in its initPortSepcific method.
+    void ensureIsOpen(UsbManager usbManager) throws IOException, AccessControlException {
+        if (!isOpen()) {
+            open(usbManager);
         }
-        ++mOpenPortsCount;
     }
 
-    protected void close() throws IOException {
-        --mOpenPortsCount;
-        if (mOpenPortsCount == 0) {
-            super.close();
+    // Calls close if there are no more open ports.
+    // Is usually called by the port implementation
+    // in its portClosed method.
+    void closeIfNoPortsOpen() throws IOException {
+        if (isOpen()) {
+            boolean hasOpenPorts = false;
+            for (int i = 0; !hasOpenPorts && (i < mPorts.length); ++i) {
+                if ((mPorts[i] != null) && (mPorts[i].isOpen())) {
+                    hasOpenPorts = true;
+                }
+            }
+    
+            if (!hasOpenPorts) {
+                close();
+            }
         }
     }
 

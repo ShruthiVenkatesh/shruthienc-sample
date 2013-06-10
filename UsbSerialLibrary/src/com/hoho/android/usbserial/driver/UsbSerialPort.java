@@ -99,6 +99,13 @@ public interface UsbSerialPort {
     public void close() throws IOException;
 
     /**
+     * Check if the port is open.
+     *
+     * @return {@code true} if the the port is open.
+     */
+    public boolean isOpen();
+
+    /**
      * Reads as many bytes as possible into the destination buffer.
      *
      * @param dest the destination byte buffer

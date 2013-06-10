@@ -76,8 +76,8 @@ public class Cp21xxSerialDriver extends CommonMultiPortUsbSerialDriver {
         }
 
         @Override
-        public void open(UsbManager usbManager) throws IOException, AccessControlException {
-            Cp21xxSerialDriver.this.open(usbManager);
+        protected void initPortSepcific(UsbManager usbManager) throws IOException, AccessControlException {
+            Cp21xxSerialDriver.this.ensureIsOpen(usbManager);
 
             boolean opened = false;
             try {
@@ -108,15 +108,21 @@ public class Cp21xxSerialDriver extends CommonMultiPortUsbSerialDriver {
                 opened = true;
             } finally {
                 if (!opened) {
-                    close();
+                    try {
+                        Cp21xxSerialDriver.this.closeIfNoPortsOpen();
+                    } catch (Exception e) {
+                    }
                 }
-            }        
+            }
         }
 
         @Override
-        public void close() throws IOException {
+        protected void deinitPortSpecific() throws IOException {
             setConfigSingle(SILABSER_IFC_ENABLE_REQUEST_CODE, UART_DISABLE);
-            Cp21xxSerialDriver.this.close();
+        }
+
+        protected void portClosed() throws IOException {
+            Cp21xxSerialDriver.this.closeIfNoPortsOpen();
         }
 
         @Override
@@ -132,7 +138,7 @@ public class Cp21xxSerialDriver extends CommonMultiPortUsbSerialDriver {
             return (count < 0) ? 0 : count;
         }
 
-        private void setBaudRate(int baudRate) throws IOException {   
+        private void setBaudRate(int baudRate) throws IOException {
             byte[] data = new byte[] {
                     (byte) ( baudRate & 0xff),
                     (byte) ((baudRate >> 8 ) & 0xff),

@@ -16,14 +16,41 @@ public abstract class CommonSinglePortUsbSerialDriver extends CommonUsbSerialPor
         mDevice = device;
     }
 
+ // Implementors implement their port specific initialization
+    // in this method.
+    protected abstract void initDriverSpecific(UsbManager usbManager)
+            throws IOException, AccessControlException;
+
+    // Implementors implement their port specific deinitialization
+    // in this method.
+    protected abstract void deinitDriverSpecific() throws IOException;
+
     @Override
-    public void open(UsbManager usbManager) throws IOException, AccessControlException {
-        mConnection = CommonUsbSerialDriver.open(usbManager, mDevice);
+    protected final void initPortSepcific(UsbManager usbManager) throws IOException, AccessControlException {
+        mConnection = CommonUsbSerialDriver.openDeviceConnection(usbManager, mDevice);
+        initDriverSpecific(usbManager);
     }
 
     @Override
-    public void close() throws IOException {
-        mConnection.close();
+    protected final void deinitPortSpecific() throws IOException {
+        try {
+            deinitDriverSpecific();
+            mConnection.close();
+            mConnection = null;
+        } finally {
+            if (mConnection != null) {
+                try {
+                    mConnection.close();
+                    mConnection = null;
+                } catch (Exception e) {
+                }
+            }
+        }
+    }
+    
+
+    @Override
+    protected void portClosed() {
     }
 
     @Override
