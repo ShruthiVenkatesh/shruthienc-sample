@@ -52,4 +52,11 @@ public interface UsbSerialDriver {
      */
     public UsbDevice getDevice();
 
+    /**
+     * Get a short name for the current USB to serial adapter device.
+     * 
+     * @return a short device name
+     */
+    public String getShortDeviceName();
+
 }

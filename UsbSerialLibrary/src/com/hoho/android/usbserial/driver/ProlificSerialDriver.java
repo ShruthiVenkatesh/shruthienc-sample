@@ -329,6 +329,11 @@ public class ProlificSerialDriver extends CdcAcmSerialDriver {
         return true;
     }
 
+    @Override
+    public String getShortDeviceName() {
+      return "PL2303";
+    }
+
     public static Map<Integer, int[]> getSupportedDevices() {
         final Map<Integer, int[]> supportedDevices = new LinkedHashMap<Integer, int[]>();
         supportedDevices.put(Integer.valueOf(UsbId.VENDOR_PROLIFIC),

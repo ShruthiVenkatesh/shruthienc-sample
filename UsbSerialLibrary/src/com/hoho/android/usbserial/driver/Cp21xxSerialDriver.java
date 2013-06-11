@@ -257,6 +257,37 @@ public class Cp21xxSerialDriver extends CommonMultiPortUsbSerialDriver {
     }
 
     @Override
+    public String getShortDeviceName() {
+      String shortDeviceName = null;
+
+      if (mDevice.getVendorId() == UsbId.VENDOR_SILABS) {
+        switch (mDevice.getProductId()) {
+        case UsbId.SILABS_CP2102:
+          shortDeviceName = "CP2102";
+          break;
+
+        case UsbId.SILABS_CP2105:
+          shortDeviceName = "CP2105";
+          break;
+
+        case UsbId.SILABS_CP2108:
+          shortDeviceName = "CP2108";
+          break;
+
+        case UsbId.SILABS_CP2110:
+          shortDeviceName = "CP2110";
+          break;
+        }
+      }
+
+      if (shortDeviceName == null) {
+        shortDeviceName = "CP21xx";
+      }
+
+      return shortDeviceName;
+    }
+
+    @Override
     protected UsbSerialPort createPortInstance(int portIdx) {
         return new Cp21xxPort(portIdx);
     }
