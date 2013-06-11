@@ -191,31 +191,31 @@ public class CdcAcmSerialDriver extends CommonSinglePortUsbSerialDriver {
 
     @Override
     public String getShortDeviceName() {
-      String shortDeviceName = null;
+        String shortDeviceName = null;
 
-      switch (mDevice.getVendorId()) {
-      case UsbId.VENDOR_ARDUINO:
-        shortDeviceName = "Arduino";
-        break;
+        switch (mDevice.getVendorId()) {
+        case UsbId.VENDOR_ARDUINO:
+            shortDeviceName = "Arduino";
+            break;
 
-      case UsbId.VENDOR_VAN_OOIJEN_TECH:
-        if (mDevice.getProductId() == UsbId.VAN_OOIJEN_TECH_TEENSYDUINO_SERIAL) {
-          shortDeviceName = "Teensyduino";
+        case UsbId.VENDOR_VAN_OOIJEN_TECH:
+            if (mDevice.getProductId() == UsbId.VAN_OOIJEN_TECH_TEENSYDUINO_SERIAL) {
+                shortDeviceName = "Teensyduino";
+            }
+            break;
+
+        case UsbId.VENDOR_LEAFLABS:
+            if (mDevice.getProductId() == UsbId.LEAFLABS_MAPLE) {
+                shortDeviceName = "Maple";
+            }
+            break;
         }
-        break;
 
-      case UsbId.VENDOR_LEAFLABS:
-        if (mDevice.getProductId() == UsbId.LEAFLABS_MAPLE) {
-          shortDeviceName = "Maple";
+        if (shortDeviceName == null) {
+            shortDeviceName = "CDC";
         }
-        break;
-      }
 
-      if (shortDeviceName == null) {
-        shortDeviceName = "CDC";
-      }
-
-      return shortDeviceName;
+        return shortDeviceName;
     }
 
     private void setDtrRts() {

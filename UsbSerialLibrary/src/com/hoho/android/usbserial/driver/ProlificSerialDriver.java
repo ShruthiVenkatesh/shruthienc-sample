@@ -331,7 +331,7 @@ public class ProlificSerialDriver extends CdcAcmSerialDriver {
 
     @Override
     public String getShortDeviceName() {
-      return "PL2303";
+        return "PL2303";
     }
 
     public static Map<Integer, int[]> getSupportedDevices() {

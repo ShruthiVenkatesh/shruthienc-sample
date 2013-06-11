@@ -488,19 +488,19 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
 
     @Override
     public String getShortDeviceName() {
-      switch (mType) {
-      case TYPE_2232H:
-        return "FT2232H";
+        switch (mType) {
+        case TYPE_2232H:
+            return "FT2232H";
 
-      case TYPE_4232H:
-        return "FT4232H";
+        case TYPE_4232H:
+            return "FT4232H";
 
-      case TYPE_R:
-        return "FT232R";
+        case TYPE_R:
+            return "FT232R";
 
-      default:
-        return "FTDI";
-      }
+        default:
+            return "FTDI";
+        }
     }
 
     private static final int getExpectedPortsCount(UsbDevice device) {
