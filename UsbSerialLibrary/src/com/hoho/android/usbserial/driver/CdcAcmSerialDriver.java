@@ -37,9 +37,9 @@ public class CdcAcmSerialDriver extends CommonSinglePortUsbSerialDriver {
             | USB_RECIP_INTERFACE;
 
     private static final int SET_LINE_CODING = 0x20;  // USB CDC 1.1 section 6.2
-    private static final int GET_LINE_CODING = 0x21;
+//    private static final int GET_LINE_CODING = 0x21;
     private static final int SET_CONTROL_LINE_STATE = 0x22;
-    private static final int SEND_BREAK = 0x23;
+//    private static final int SEND_BREAK = 0x23;
 
     protected static final int STATUS_FLAG_CD = 0x01;
     protected static final int STATUS_FLAG_DSR = 0x02;

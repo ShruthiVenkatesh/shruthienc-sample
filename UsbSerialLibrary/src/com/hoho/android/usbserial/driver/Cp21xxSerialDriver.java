@@ -54,8 +54,8 @@ public class Cp21xxSerialDriver extends CommonMultiPortUsbSerialDriver {
         /*
          * SILABSER_SET_MHS_REQUEST_CODE
          */
-        private static final int MCR_DTR = 0x0001;
-        private static final int MCR_RTS = 0x0002;
+//        private static final int MCR_DTR = 0x0001;
+//        private static final int MCR_RTS = 0x0002;
         private static final int MCR_ALL = 0x0003;
 
         private static final int CONTROL_WRITE_DTR = 0x0100;

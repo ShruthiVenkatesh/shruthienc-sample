@@ -86,7 +86,7 @@ import java.util.Map;
  */
 public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
 
-    private static final String TAG = FtdiSerialDriver.class.getSimpleName();
+//    private static final String TAG = FtdiSerialDriver.class.getSimpleName();
 
     /**
      * FTDI chip types.
@@ -124,12 +124,12 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
         /**
          * Set the modem control register.
          */
-        private static final int SIO_MODEM_CTRL_REQUEST = 1;
+//        private static final int SIO_MODEM_CTRL_REQUEST = 1;
 
         /**
          * Set flow control register.
          */
-        private static final int SIO_SET_FLOW_CTRL_REQUEST = 2;
+//        private static final int SIO_SET_FLOW_CTRL_REQUEST = 2;
 
         /**
          * Set baud rate.
