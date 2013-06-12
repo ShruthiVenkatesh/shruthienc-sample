@@ -92,7 +92,7 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
      * FTDI chip types.
      */
     private static enum DeviceType {
-        TYPE_BM, TYPE_AM, TYPE_2232C, TYPE_R, TYPE_2232H, TYPE_4232H;
+        TYPE_BM, TYPE_AM, TYPE_2232, TYPE_R, TYPE_4232H;
     }
 
     private DeviceType mType;
@@ -157,6 +157,7 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
         private static final int MODEM_STATUS_HEADER_LENGTH = 2;
 
         private final int mPortIdx;
+        private final int mControlIdx;
 
         private UsbEndpoint mReadEndpoint;
         private UsbEndpoint mWriteEndpoint;
@@ -172,6 +173,13 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
          */
         public FtdiSerialPort(int portIdx) {
             mPortIdx = portIdx;
+            if ((mType == DeviceType.TYPE_2232) || (mType == DeviceType.TYPE_4232H)) {
+                mControlIdx = (mPortIdx + 1);
+            } else if (portIdx == 0) {
+                mControlIdx = 0;
+            } else {
+                throw new UnsupportedOperationException(); // Unsupported multi port device?
+            }
         }
 
         /**
@@ -202,7 +210,7 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
 
         public void reset() throws IOException {
             int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE, SIO_RESET_REQUEST,
-                    SIO_RESET_SIO, mPortIdx, null, 0, USB_WRITE_TIMEOUT_MILLIS);
+                    SIO_RESET_SIO, mControlIdx, null, 0, USB_WRITE_TIMEOUT_MILLIS);
             if (result != 0) {
                 throw new IOException("Reset failed: result=" + result);
             }
@@ -266,7 +274,7 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
             long index = vals[1];
             long value = vals[2];
             int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE,
-                    SIO_SET_BAUD_RATE_REQUEST, (int) value, ((int) index) | mPortIdx,
+                    SIO_SET_BAUD_RATE_REQUEST, (int) value, (int) index,
                     null, 0, USB_WRITE_TIMEOUT_MILLIS);
             if (result != 0) {
                 throw new IOException("Setting baudrate failed: result=" + result);
@@ -316,7 +324,7 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
             }
 
             int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE,
-                    SIO_SET_DATA_REQUEST, config, mPortIdx,
+                    SIO_SET_DATA_REQUEST, config, mControlIdx,
                     null, 0, USB_WRITE_TIMEOUT_MILLIS);
             if (result != 0) {
                 throw new IOException("Setting parameters failed: result=" + result);
@@ -394,11 +402,11 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
             // Split into "value" and "index" values
             long value = encodedDivisor & 0xFFFF;
             long index;
-            if (mType == DeviceType.TYPE_2232C || mType == DeviceType.TYPE_2232H
+            if (mType == DeviceType.TYPE_2232
                     || mType == DeviceType.TYPE_4232H) {
                 index = (encodedDivisor >> 8) & 0xffff;
                 index &= 0xFF00;
-                index |= 0 /* TODO mIndex */;
+                index |= mControlIdx;
             } else {
                 index = (encodedDivisor >> 16) & 0xffff;
             }
@@ -451,7 +459,7 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
         public boolean purgeHwBuffers(boolean purgeReadBuffers, boolean purgeWriteBuffers) throws IOException {
             if (purgeReadBuffers) {
                 int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE, SIO_RESET_REQUEST,
-                        SIO_RESET_PURGE_RX, mPortIdx, null, 0, USB_WRITE_TIMEOUT_MILLIS);
+                        SIO_RESET_PURGE_RX, mControlIdx, null, 0, USB_WRITE_TIMEOUT_MILLIS);
                 if (result != 0) {
                     throw new IOException("Flushing RX failed: result=" + result);
                 }
@@ -459,7 +467,7 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
 
             if (purgeWriteBuffers) {
                 int result = mConnection.controlTransfer(FTDI_DEVICE_OUT_REQTYPE, SIO_RESET_REQUEST,
-                        SIO_RESET_PURGE_TX, mPortIdx, null, 0, USB_WRITE_TIMEOUT_MILLIS);
+                        SIO_RESET_PURGE_TX, mControlIdx, null, 0, USB_WRITE_TIMEOUT_MILLIS);
                 if (result != 0) {
                     throw new IOException("Flushing RX failed: result=" + result);
                 }
@@ -474,11 +482,13 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
         super(device, getExpectedPortsCount(device));
 
         switch (device.getProductId()) {
-        case UsbId.FTDI_FT2232H:
-            mType = DeviceType.TYPE_2232H;
+        case UsbId.FTDI_FT2232:
+            mType = DeviceType.TYPE_2232;
+            break;
 
         case UsbId.FTDI_FT4232H:
             mType = DeviceType.TYPE_4232H;
+            break;
 
         default:
             // TODO: other types?
@@ -489,8 +499,8 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
     @Override
     public String getShortDeviceName() {
         switch (mType) {
-        case TYPE_2232H:
-            return "FT2232H";
+        case TYPE_2232:
+            return "FT2232";
 
         case TYPE_4232H:
             return "FT4232H";
@@ -505,7 +515,7 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
 
     private static final int getExpectedPortsCount(UsbDevice device) {
         switch (device.getProductId()) {
-        case UsbId.FTDI_FT2232H:
+        case UsbId.FTDI_FT2232:
             return 2;
 
         case UsbId.FTDI_FT4232H:
@@ -526,7 +536,7 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
         supportedDevices.put(Integer.valueOf(UsbId.VENDOR_FTDI),
                 new int[] {
             UsbId.FTDI_FT232R,
-            UsbId.FTDI_FT2232H,
+            UsbId.FTDI_FT2232,
             UsbId.FTDI_FT4232H
         });
         return supportedDevices;
