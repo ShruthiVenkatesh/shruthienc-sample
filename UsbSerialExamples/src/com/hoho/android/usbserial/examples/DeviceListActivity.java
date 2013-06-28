@@ -84,11 +84,13 @@ public class DeviceListActivity extends Activity {
     /** Simple container for a UsbDevice and its driver. */
     private static class DeviceEntry {
         public UsbDevice device;
-        public UsbSerialPort port;
+        public UsbSerialDriver driver;
+        public int portIdx;
 
-        DeviceEntry(UsbDevice device, UsbSerialPort port) {
+        DeviceEntry(UsbDevice device, UsbSerialDriver driver, int portIdx) {
             this.device = device;
-            this.port = port;
+            this.driver = driver;
+            this.portIdx = portIdx;
         }
     }
 
@@ -123,8 +125,8 @@ public class DeviceListActivity extends Activity {
                         HexDump.toHexString((short) entry.device.getProductId()));
                 row.getText1().setText(title);
 
-                final String subtitle = entry.port != null ?
-                        entry.port.getClass().getSimpleName() : "No Port";
+                final String subtitle = entry.device != null ?
+                        entry.driver.getShortDeviceName() + " port " + entry.portIdx : "No Port";
                 row.getText2().setText(subtitle);
 
                 return row;
@@ -143,7 +145,7 @@ public class DeviceListActivity extends Activity {
                 }
 
                 final DeviceEntry entry = mEntries.get(position);
-                final UsbSerialPort port = entry.port;
+                final UsbSerialPort port = entry.driver.getPort(entry.portIdx);
                 if (port == null) {
                     Log.d(TAG, "No port.");
                     return;
@@ -181,11 +183,11 @@ public class DeviceListActivity extends Activity {
                     Log.d(TAG, "Found usb device: " + device);
                     if (driver == null) {
                         Log.d(TAG, "  - No UsbSerialDriver available.");
-                        result.add(new DeviceEntry(device, null));
+                        result.add(new DeviceEntry(device, null, 0));
                     } else {
                         Log.d(TAG, "  + " + driver + ", " + driver.getPortCount() + " ports.");
                         for (int i = 0; i < driver.getPortCount(); ++i) {
-                            result.add(new DeviceEntry(device, driver.getPort(i)));
+                            result.add(new DeviceEntry(device, driver, i));
                         }
                     }
                 }
