@@ -23,12 +23,14 @@ package com.hoho.android.usbserial.examples;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.util.HexDump;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
@@ -56,7 +58,9 @@ public class SerialConsoleActivity extends Activity {
      * can get away with it because both activities will run in the same
      * process, and this is a simple demo.
      */
-    private static UsbSerialDriver sDriver = null;
+    private static UsbSerialPort sPort = null;
+
+    private UsbManager mUsbManager;
 
     private TextView mTitleTextView;
     private TextView mDumpTextView;
@@ -89,6 +93,9 @@ public class SerialConsoleActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.serial_console);
+
+        mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+
         mTitleTextView = (TextView) findViewById(R.id.demoTitle);
         mDumpTextView = (TextView) findViewById(R.id.consoleText);
         mScrollView = (ScrollView) findViewById(R.id.demoScroller);
@@ -98,13 +105,13 @@ public class SerialConsoleActivity extends Activity {
     protected void onPause() {
         super.onPause();
         stopIoManager();
-        if (sDriver != null) {
+        if (sPort != null) {
             try {
-                sDriver.close();
+                sPort.close();
             } catch (IOException e) {
                 // Ignore.
             }
-            sDriver = null;
+            sPort = null;
         }
         finish();
     }
@@ -112,25 +119,25 @@ public class SerialConsoleActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "Resumed, sDriver=" + sDriver);
-        if (sDriver == null) {
+        Log.d(TAG, "Resumed, sDriver=" + sPort);
+        if (sPort == null) {
             mTitleTextView.setText("No serial device.");
         } else {
             try {
-                sDriver.open();
-                sDriver.setParameters(115200, 8, UsbSerialDriver.STOPBITS_1, UsbSerialDriver.PARITY_NONE);
+                sPort.open(mUsbManager);
+                sPort.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
             } catch (IOException e) {
                 Log.e(TAG, "Error setting up device: " + e.getMessage(), e);
                 mTitleTextView.setText("Error opening device: " + e.getMessage());
                 try {
-                    sDriver.close();
+                    sPort.close();
                 } catch (IOException e2) {
                     // Ignore.
                 }
-                sDriver = null;
+                sPort = null;
                 return;
             }
-            mTitleTextView.setText("Serial device: " + sDriver.getClass().getSimpleName());
+            mTitleTextView.setText("Serial device: " + sPort.getClass().getSimpleName());
         }
         onDeviceStateChange();
     }
@@ -144,9 +151,9 @@ public class SerialConsoleActivity extends Activity {
     }
 
     private void startIoManager() {
-        if (sDriver != null) {
+        if (sPort != null) {
             Log.i(TAG, "Starting io manager ..");
-            mSerialIoManager = new SerialInputOutputManager(sDriver, mListener);
+            mSerialIoManager = new SerialInputOutputManager(sPort, mListener);
             mExecutor.submit(mSerialIoManager);
         }
     }
@@ -169,8 +176,8 @@ public class SerialConsoleActivity extends Activity {
      * @param context
      * @param driver
      */
-    static void show(Context context, UsbSerialDriver driver) {
-        sDriver = driver;
+    static void show(Context context, UsbSerialPort port) {
+        sPort = port;
         final Intent intent = new Intent(context, SerialConsoleActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY);
         context.startActivity(intent);

@@ -41,6 +41,7 @@ import android.widget.TextView;
 import android.widget.TwoLineListItem;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 import com.hoho.android.usbserial.util.HexDump;
 
@@ -83,11 +84,11 @@ public class DeviceListActivity extends Activity {
     /** Simple container for a UsbDevice and its driver. */
     private static class DeviceEntry {
         public UsbDevice device;
-        public UsbSerialDriver driver;
+        public UsbSerialPort port;
 
-        DeviceEntry(UsbDevice device, UsbSerialDriver driver) {
+        DeviceEntry(UsbDevice device, UsbSerialPort port) {
             this.device = device;
-            this.driver = driver;
+            this.port = port;
         }
     }
 
@@ -122,8 +123,8 @@ public class DeviceListActivity extends Activity {
                         HexDump.toHexString((short) entry.device.getProductId()));
                 row.getText1().setText(title);
 
-                final String subtitle = entry.driver != null ?
-                        entry.driver.getClass().getSimpleName() : "No Driver";
+                final String subtitle = entry.port != null ?
+                        entry.port.getClass().getSimpleName() : "No Port";
                 row.getText2().setText(subtitle);
 
                 return row;
@@ -142,13 +143,13 @@ public class DeviceListActivity extends Activity {
                 }
 
                 final DeviceEntry entry = mEntries.get(position);
-                final UsbSerialDriver driver = entry.driver;
-                if (driver == null) {
-                    Log.d(TAG, "No driver.");
+                final UsbSerialPort port = entry.port;
+                if (port == null) {
+                    Log.d(TAG, "No port.");
                     return;
                 }
 
-                showConsoleActivity(driver);
+                showConsoleActivity(port);
             }
         });
     }
@@ -175,16 +176,16 @@ public class DeviceListActivity extends Activity {
                 SystemClock.sleep(1000);
                 final List<DeviceEntry> result = new ArrayList<DeviceEntry>();
                 for (final UsbDevice device : mUsbManager.getDeviceList().values()) {
-                    final List<UsbSerialDriver> drivers =
-                            UsbSerialProber.probeSingleDevice(mUsbManager, device);
+                    final UsbSerialDriver driver =
+                            UsbSerialProber.probeSingleDevice(device);
                     Log.d(TAG, "Found usb device: " + device);
-                    if (drivers.isEmpty()) {
+                    if (driver == null) {
                         Log.d(TAG, "  - No UsbSerialDriver available.");
                         result.add(new DeviceEntry(device, null));
                     } else {
-                        for (UsbSerialDriver driver : drivers) {
-                            Log.d(TAG, "  + " + driver);
-                            result.add(new DeviceEntry(device, driver));
+                        Log.d(TAG, "  + " + driver + ", " + driver.getPortCount() + " ports.");
+                        for (int i = 0; i < driver.getPortCount(); ++i) {
+                            result.add(new DeviceEntry(device, driver.getPort(i)));
                         }
                     }
                 }
@@ -214,8 +215,8 @@ public class DeviceListActivity extends Activity {
         mProgressBar.setVisibility(View.INVISIBLE);
     }
 
-    private void showConsoleActivity(UsbSerialDriver driver) {
-        SerialConsoleActivity.show(this, driver);
+    private void showConsoleActivity(UsbSerialPort port) {
+        SerialConsoleActivity.show(this, port);
     }
 
 }
