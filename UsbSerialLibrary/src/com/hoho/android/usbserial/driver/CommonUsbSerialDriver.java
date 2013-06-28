@@ -50,7 +50,7 @@ abstract class CommonUsbSerialDriver implements UsbSerialDriver {
         mConnection = openDeviceConnection(usbManager, mDevice);
     }
 
-    protected final void close() throws IOException {
+    protected final void close() {
         if (mConnection == null) {
             throw new IllegalStateException("Driver not open");
         }
