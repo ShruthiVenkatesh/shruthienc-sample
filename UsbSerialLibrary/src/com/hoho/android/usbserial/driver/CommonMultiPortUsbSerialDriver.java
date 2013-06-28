@@ -28,7 +28,7 @@ public abstract class CommonMultiPortUsbSerialDriver extends CommonUsbSerialDriv
     // Calls close if there are no more open ports.
     // Is usually called by the port implementation
     // in its portClosed method.
-    void closeIfNoPortsOpen() throws IOException {
+    void closeIfNoPortsOpen() {
         if (isOpen()) {
             boolean hasOpenPorts = false;
             for (int i = 0; !hasOpenPorts && (i < mPorts.length); ++i) {
