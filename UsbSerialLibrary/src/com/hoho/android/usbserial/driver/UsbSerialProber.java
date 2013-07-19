@@ -201,8 +201,8 @@ public enum UsbSerialProber {
      * {@link UsbDevice}s found on the bus. If no compatible devices are found,
      * the list will be empty.
      *
-     * @param usbManager
-     * @return
+     * @param usbManager the {@link UsbManager} to use.
+     * @return a list containing zero or more {@link UsbSerialDriver} instances.
      */
     public static List<UsbSerialDriver> findAllDevices(final UsbManager usbManager) {
         final List<UsbSerialDriver> result = new ArrayList<UsbSerialDriver>();
