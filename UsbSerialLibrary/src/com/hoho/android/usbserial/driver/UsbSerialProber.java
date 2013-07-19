@@ -163,7 +163,6 @@ public enum UsbSerialProber {
      * Special method for testing a specific device for driver support,
      * returning any compatible driver(s).
      *
-     * <p/>
      * Clients should ordinarily use {@link #findAllDevices(UsbManager)}, which
      * operates against the entire bus of devices. This method is useful when
      * testing against only a single target is desired.
