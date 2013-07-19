@@ -19,7 +19,7 @@ public abstract class CommonMultiPortUsbSerialDriver extends CommonUsbSerialDriv
     // Calls open if the driver is not yet opened.
     // Is usually called by the port implementation as the
     // first action in its initPortSepcific method.
-    void ensureIsOpen(UsbManager usbManager) throws IOException, AccessControlException {
+    synchronized void ensureIsOpen(UsbManager usbManager) throws IOException, AccessControlException {
         if (!isOpen()) {
             open(usbManager);
         }
@@ -28,7 +28,7 @@ public abstract class CommonMultiPortUsbSerialDriver extends CommonUsbSerialDriv
     // Calls close if there are no more open ports.
     // Is usually called by the port implementation
     // in its portClosed method.
-    void closeIfNoPortsOpen() {
+    synchronized void closeIfNoPortsOpen() {
         if (isOpen()) {
             boolean hasOpenPorts = false;
             for (int i = 0; !hasOpenPorts && (i < mPorts.length); ++i) {
