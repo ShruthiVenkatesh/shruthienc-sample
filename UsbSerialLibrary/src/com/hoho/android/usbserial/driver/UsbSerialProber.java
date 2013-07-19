@@ -55,44 +55,64 @@ public enum UsbSerialProber {
     FTDI_SERIAL {
         @Override
         public UsbSerialDriver getDevice(final UsbDevice usbDevice) {
-            if (testIfSupported(usbDevice, FtdiSerialDriver.getSupportedDevices())) {
+            if (isDeviceSupported(usbDevice)) {
                 return new FtdiSerialDriver(usbDevice);
             } else {
                 return null;
             }
+        }
+
+        @Override
+        public boolean testIfSupported(final UsbDevice usbDevice) {
+            return testIfSupported(usbDevice, FtdiSerialDriver.getSupportedDevices());
         }
     },
 
     CDC_ACM_SERIAL {
         @Override
         public UsbSerialDriver getDevice(UsbDevice usbDevice) {
-            if (testIfSupported(usbDevice, CdcAcmSerialDriver.getSupportedDevices())) {
+            if (isDeviceSupported(usbDevice)) {
                return new CdcAcmSerialDriver(usbDevice);
             } else {
                 return null;
             }
+        }
+
+        @Override
+        public boolean testIfSupported(final UsbDevice usbDevice) {
+            return testIfSupported(usbDevice, CdcAcmSerialDriver.getSupportedDevices());
         }
     },
 
     SILAB_SERIAL {
         @Override
         public UsbSerialDriver getDevice(final UsbDevice usbDevice) {
-            if (testIfSupported(usbDevice, Cp21xxSerialDriver.getSupportedDevices())) {
+            if (isDeviceSupported(usbDevice)) {
                 return new Cp21xxSerialDriver(usbDevice);
             } else {
                 return null;
             }
+        }
+
+        @Override
+        public boolean testIfSupported(final UsbDevice usbDevice) {
+            return testIfSupported(usbDevice, Cp21xxSerialDriver.getSupportedDevices());
         }
     },
 
     PROLIFIC_SERIAL {
         @Override
         public UsbSerialDriver getDevice(final UsbDevice usbDevice) {
-            if (testIfSupported(usbDevice, ProlificSerialDriver.getSupportedDevices())) {
+            if (isDeviceSupported(usbDevice)) {
                 return new ProlificSerialDriver(usbDevice);
             } else {
                 return null;
             }
+        }
+
+        @Override
+        public boolean testIfSupported(final UsbDevice usbDevice) {
+            return testIfSupported(usbDevice, ProlificSerialDriver.getSupportedDevices());
         }
     };
 
@@ -106,6 +126,14 @@ public enum UsbSerialProber {
      *         no device could be acquired
      */
     public abstract UsbSerialDriver getDevice(final UsbDevice usbDevice);
+
+    /**
+     * Check if a USB device is supported.
+     * 
+     * @param usbDevice the raw {@link UsbDevice} to use
+     * @return {@code true} if the device supported
+     */
+    public abstract boolean testIfSupported(final UsbDevice usbDevice);
 
     /**
      * Creates and returns a new {@link UsbSerialDriver} instance for the first
@@ -151,6 +179,22 @@ public enum UsbSerialProber {
             }
         }
         return null;
+    }
+
+    /**
+     * Special method for testing a specific device for driver support.
+     * 
+     * @param usbDevice the device to test against.
+     * @return {@code true} if the device supported
+     */
+    public static boolean isDeviceSupported(final UsbDevice usbDevice) {
+        for (final UsbSerialProber prober : values()) {
+            final boolean supported = prober.testIfSupported(usbDevice);
+            if (supported) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
