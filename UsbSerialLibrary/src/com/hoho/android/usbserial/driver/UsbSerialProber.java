@@ -64,7 +64,7 @@ public enum UsbSerialProber {
 
         @Override
         public boolean testIfSupported(final UsbDevice usbDevice) {
-            return testIfSupported(usbDevice, FtdiSerialDriver.getSupportedDevices());
+            return testIfInSupportedDevicesMap(usbDevice, FtdiSerialDriver.getSupportedDevices());
         }
     },
 
@@ -80,7 +80,7 @@ public enum UsbSerialProber {
 
         @Override
         public boolean testIfSupported(final UsbDevice usbDevice) {
-            return testIfSupported(usbDevice, CdcAcmSerialDriver.getSupportedDevices());
+            return testIfInSupportedDevicesMap(usbDevice, CdcAcmSerialDriver.getSupportedDevices());
         }
     },
 
@@ -96,7 +96,7 @@ public enum UsbSerialProber {
 
         @Override
         public boolean testIfSupported(final UsbDevice usbDevice) {
-            return testIfSupported(usbDevice, Cp21xxSerialDriver.getSupportedDevices());
+            return testIfInSupportedDevicesMap(usbDevice, Cp21xxSerialDriver.getSupportedDevices());
         }
     },
 
@@ -112,7 +112,7 @@ public enum UsbSerialProber {
 
         @Override
         public boolean testIfSupported(final UsbDevice usbDevice) {
-            return testIfSupported(usbDevice, ProlificSerialDriver.getSupportedDevices());
+            return testIfInSupportedDevicesMap(usbDevice, ProlificSerialDriver.getSupportedDevices());
         }
     };
 
@@ -225,7 +225,7 @@ public enum UsbSerialProber {
      * @param supportedDevices map of vendor IDs to product ID(s)
      * @return {@code true} if supported
      */
-    private static boolean testIfSupported(final UsbDevice usbDevice,
+    private static boolean testIfInSupportedDevicesMap(final UsbDevice usbDevice,
             final Map<Integer, int[]> supportedDevices) {
         final int[] supportedProducts = supportedDevices.get(
                 Integer.valueOf(usbDevice.getVendorId()));
