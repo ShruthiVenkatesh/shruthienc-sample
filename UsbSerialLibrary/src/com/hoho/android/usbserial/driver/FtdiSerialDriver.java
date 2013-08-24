@@ -99,11 +99,6 @@ public class FtdiSerialDriver extends CommonMultiPortUsbSerialDriver {
 
     public class FtdiSerialPort extends CommonUsbSerialPort {
 
-        public static final int USB_TYPE_STANDARD = 0x00 << 5;
-        public static final int USB_TYPE_CLASS = 0x00 << 5;
-        public static final int USB_TYPE_VENDOR = 0x00 << 5;
-        public static final int USB_TYPE_RESERVED = 0x00 << 5;
-
         public static final int USB_RECIP_DEVICE = 0x00;
         public static final int USB_RECIP_INTERFACE = 0x01;
         public static final int USB_RECIP_ENDPOINT = 0x02;
