@@ -55,7 +55,7 @@ public enum UsbSerialProber {
     FTDI_SERIAL {
         @Override
         public UsbSerialDriver getDevice(final UsbDevice usbDevice) {
-            if (isDeviceSupported(usbDevice)) {
+            if (testIfSupported(usbDevice)) {
                 return new FtdiSerialDriver(usbDevice);
             } else {
                 return null;
@@ -71,7 +71,7 @@ public enum UsbSerialProber {
     CDC_ACM_SERIAL {
         @Override
         public UsbSerialDriver getDevice(UsbDevice usbDevice) {
-            if (isDeviceSupported(usbDevice)) {
+            if (testIfSupported(usbDevice)) {
                return new CdcAcmSerialDriver(usbDevice);
             } else {
                 return null;
@@ -87,7 +87,7 @@ public enum UsbSerialProber {
     SILAB_SERIAL {
         @Override
         public UsbSerialDriver getDevice(final UsbDevice usbDevice) {
-            if (isDeviceSupported(usbDevice)) {
+            if (testIfSupported(usbDevice)) {
                 return new Cp21xxSerialDriver(usbDevice);
             } else {
                 return null;
@@ -103,7 +103,7 @@ public enum UsbSerialProber {
     PROLIFIC_SERIAL {
         @Override
         public UsbSerialDriver getDevice(final UsbDevice usbDevice) {
-            if (isDeviceSupported(usbDevice)) {
+            if (testIfSupported(usbDevice)) {
                 return new ProlificSerialDriver(usbDevice);
             } else {
                 return null;
